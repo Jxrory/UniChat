@@ -75,7 +75,7 @@ class TelegramAdapter(ChannelAdapter):
         chunks = truncate_message(formatted, len_fn=utf16_len)
         text = chunks[0]
 
-        logger.debug("Telegram send request: target=%s", target)
+        logger.debug("Telegram send request: target=%s text=%s", target, text)
 
         async with httpx.AsyncClient() as client:
             try:
