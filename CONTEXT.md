@@ -16,16 +16,31 @@ _Avoid_: 平台、platform（platform 在本文里指外部 IM 平台）
 外部 IM 平台上联系 UniChat 的人。v1 一个 Contact 由 (Inbox, source_id) 唯一确定，不做跨渠道合并。
 _Avoid_: 客户、customer、user（user 在本文指人工客服）
 
-**source_id**:
-外部平台侧的稳定标识（Telegram chat_id、WhatsApp 手机号等）。双向用途：入向去重（防 webhook 重试刷消息）+ 出向 echo 防环（已发出的消息不再被回声当 incoming 重复处理）。
+**Contact.source_id**:
+外部平台侧的稳定用户标识（Telegram chat_id、WhatsApp 手机号等）。与 Inbox 一起唯一确定一个 Contact。
 _Avoid_: external_id、platform_id
 
+**Message.source_id**:
+外部平台侧的消息级 ID（Telegram message_id）。用于双向去重：入向防 webhook 重试刷消息，出向防 echo 环。
+_Avoid_: external_id、platform_id（注意与 Contact.source_id 是不同层级的概念）
+
 **Conversation**:
-消息的容器，关联一个 Inbox、一个 Contact。会话有状态机（active / pending_human / resolved）。同一 Contact 在同一 Inbox 下按 Chatwoot 的「取最近未 resolved 会话，没有则新建」策略归属消息。
+消息的容器，关联一个 Inbox、一个 Contact。会话状态机：
+
+- `active` — AgentBot 正常回复
+- `pending_human` — AgentBot 发出 handoff 信号后等待人工接入；Contact 在此期间发新消息则回到 active
+- `resolved` — 人工客服标记结束，不再接受新消息
+
+同一 Contact 在同一 Inbox 下按「取最近未 resolved 会话，没有则新建」归属消息。
 _Avoid_: session（session 暗示临时态）、thread、chat
 
 **Message**:
-消息单元。有方向（incoming / outgoing / activity）、sender 类型（Contact / AgentBot / User）、内容类型（v1 先 text）、投递状态、handoff flag、source_id。
+消息单元。有方向（incoming / outgoing / activity）、sender 类型（Contact / AgentBot / User）、内容类型（v1 先 text）、投递状态、handoff flag、Message.source_id。
+
+- `incoming` — Contact 发来的消息
+- `outgoing` — 发往外部平台的消息（AgentBot 或 User 发出）
+- `activity` — 系统动作记录（如"Conversation resolved"、"Conversation reopened"），无外部平台的 source_id
+
 _Avoid_: 文本、event（event 在本文指系统总线信号）
 
 **AgentBot**:

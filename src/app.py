@@ -1,0 +1,55 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from src.adapters.telegram import register as register_telegram
+from src.bus import init_buses, get_webhook_incoming_bus, get_incoming_bus, get_out_coming_bus
+from src.config import AppConfig, load_config
+from src.db import create_all, dispose_engine, init_db
+from src.routes.webhook import router as webhook_router
+from src.services.ingest import IngestService
+
+register_telegram()
+
+
+def create_app(config: AppConfig | None = None) -> FastAPI:
+    if config is None:
+        config = load_config()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        init_db(config.database_url)
+        create_all()
+        init_buses()
+
+        ingest_service = IngestService()
+        await ingest_service.start()
+
+        webhook_bus = get_webhook_incoming_bus()
+        incoming_bus = get_incoming_bus()
+        out_coming_bus = get_out_coming_bus()
+
+        bg_task = asyncio.create_task(webhook_bus.run())
+        bg_task2 = asyncio.create_task(incoming_bus.run())
+        bg_task3 = asyncio.create_task(out_coming_bus.run())
+
+        yield
+
+        bg_task.cancel()
+        bg_task2.cancel()
+        bg_task3.cancel()
+        try:
+            await asyncio.gather(bg_task, bg_task2, bg_task3, return_exceptions=True)
+        except Exception:
+            pass
+
+        dispose_engine()
+
+    app = FastAPI(lifespan=lifespan)
+    app.state.config = config
+
+    app.include_router(webhook_router)
+
+    return app
