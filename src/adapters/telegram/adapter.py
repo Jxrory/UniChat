@@ -71,15 +71,16 @@ class TelegramAdapter(ChannelAdapter):
 
         url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-        formatted = format_message(content)
-        chunks = truncate_message(formatted, len_fn=utf16_len)
-        text = chunks[0]
+        # formatted = format_message(content)
+        # chunks = truncate_message(formatted, len_fn=utf16_len)
+        # text = chunks[0]
+        text = content
 
-        logger.debug("Telegram send request: target=%s text=%s", target, text)
+        logger.debug("Telegram send request: target=%s", target)
 
         async with httpx.AsyncClient() as client:
             try:
-                payload = {"chat_id": target, "text": text, "parse_mode": "MarkdownV2"}
+                payload = {"chat_id": target, "text": text, "parse_mode": "Markdown"}
                 resp = await client.post(url, json=payload, timeout=10)
                 if resp.is_success:
                     result: dict[str, Any] = resp.json()
