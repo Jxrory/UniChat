@@ -59,3 +59,17 @@ Bot-only 排除 Chatwoot 全套 SLA/waiting_since/私密笔记/@提及/邮件通
 ## 部署
 
 裸 venv + systemd + 已有 nginx + 证书。
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as GitHub issues (`gh` CLI). External PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical roles map to label strings of the same name (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — `CONTEXT.md` at root, `docs/adr/` for architectural decisions. See `docs/agents/domain.md`.
