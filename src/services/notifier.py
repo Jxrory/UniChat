@@ -44,10 +44,13 @@ class AgentBotNotifier:
                 logger.warning("Inbox not found: inbox_id=%s", msg.inbox_id)
                 return
 
-            agentbot_url = inbox.config.get("agentbot_url")
-            agentbot_token = inbox.config.get("agentbot_token")
-            if not agentbot_url or not agentbot_token:
-                logger.warning("AgentBot not configured for inbox=%s", msg.inbox_id)
+            agentbot_url = inbox.config.get("agentbot_url", "")
+            agentbot_token = inbox.config.get("agentbot_token", "")
+            if not agentbot_url:
+                logger.info("AgentBot disabled for inbox=%s (no url). msg_id=%s content=%s", msg.inbox_id, msg.id, msg.content)
+                return
+            if not agentbot_token:
+                logger.warning("AgentBot not configured (no token) for inbox=%s", msg.inbox_id)
                 return
 
             payload = {
