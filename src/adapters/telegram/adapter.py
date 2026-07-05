@@ -4,6 +4,12 @@ from typing import Any
 import httpx
 
 from src.adapters.base import ChannelAdapter, SendResult, WebhookEvent
+from src.adapters.telegram.format import (
+    _strip_mdv2,
+    format_message,
+    truncate_message,
+    utf16_len,
+)
 
 logger = logging.getLogger("unichat.telegram_adapter")
 
@@ -64,17 +70,35 @@ class TelegramAdapter(ChannelAdapter):
             return SendResult(ok=False, error="token not configured")
 
         url = f"https://api.telegram.org/bot{token}/sendMessage"
-        payload = {"chat_id": target, "text": content}
-        logger.debug("Telegram send request: target=%s payload=%s", target, payload)
+
+        formatted = format_message(content)
+        chunks = truncate_message(formatted, len_fn=utf16_len)
+        text = chunks[0]
+
+        logger.debug("Telegram send request: target=%s", target)
 
         async with httpx.AsyncClient() as client:
             try:
+                payload = {"chat_id": target, "text": text, "parse_mode": "MarkdownV2"}
                 resp = await client.post(url, json=payload, timeout=10)
                 if resp.is_success:
                     result: dict[str, Any] = resp.json()
                     msg_id = str(result["result"]["message_id"])
-                    logger.debug("Telegram send response: target=%s status=%d body=%s", target, resp.status_code, resp.text)
+                    logger.debug("Telegram send response: target=%s status=%d", target, resp.status_code)
                     return SendResult(ok=True, platform_message_id=msg_id)
+
+                error_text = resp.text.lower()
+                if resp.status_code == 400 and ("parse" in error_text or "markdown" in error_text):
+                    logger.warning("MarkdownV2 parse failed, falling back to plain text: target=%s", target)
+                    plain = _strip_mdv2(text)
+                    payload = {"chat_id": target, "text": plain}
+                    resp = await client.post(url, json=payload, timeout=10)
+                    if resp.is_success:
+                        result = resp.json()
+                        msg_id = str(result["result"]["message_id"])
+                        return SendResult(ok=True, platform_message_id=msg_id)
+                    return SendResult(ok=False, error=resp.text)
+
                 logger.warning("Telegram API error: target=%s status=%s body=%s", target, resp.status_code, resp.text)
                 return SendResult(ok=False, error=resp.text)
             except Exception as e:
