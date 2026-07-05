@@ -17,4 +17,4 @@ server:
   admin_token: "${ADMIN_TOKEN}"
 
 database:
-  url: "sqlite+aiosqlite:///./unichat.db"
+  url: "sqlite:///./unichat.db"
