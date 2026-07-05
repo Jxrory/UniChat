@@ -24,6 +24,108 @@ def utf16_len(s: str) -> int:
 
 MAX_MESSAGE_LENGTH = 4096
 
+_TABLE_SEPARATOR_RE = re.compile(
+    r'^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*){1,}\|?\s*$'
+)
+
+
+def _is_table_row(line: str) -> bool:
+    stripped = line.strip()
+    return bool(stripped) and '|' in stripped
+
+
+def _split_markdown_table_row(line: str) -> list[str]:
+    stripped = line.strip()
+    if stripped.startswith("|"):
+        stripped = stripped[1:]
+    if stripped.endswith("|"):
+        stripped = stripped[:-1]
+    return [cell.strip() for cell in stripped.split("|")]
+
+
+def _render_table_block(table_block: list[str]) -> str:
+    if len(table_block) < 3:
+        return "\n".join(table_block)
+
+    headers = _split_markdown_table_row(table_block[0])
+    if len(headers) < 2:
+        return "\n".join(table_block)
+
+    first_data_row = (
+        _split_markdown_table_row(table_block[2])
+        if len(table_block) > 2
+        else []
+    )
+    has_row_label_col = len(first_data_row) == len(headers) + 1
+
+    rendered_groups: list[str] = []
+    for index, row in enumerate(table_block[2:], start=1):
+        cells = _split_markdown_table_row(row)
+        if has_row_label_col:
+            heading = cells[0] if cells and cells[0] else f"Row {index}"
+            data_cells = cells[1:]
+        else:
+            heading = next((cell for cell in cells if cell), f"Row {index}")
+            data_cells = cells
+
+        if len(data_cells) < len(headers):
+            data_cells.extend([""] * (len(headers) - len(data_cells)))
+        elif len(data_cells) > len(headers):
+            data_cells = data_cells[: len(headers)]
+
+        bullets: list[str] = []
+        for header, value in zip(headers, data_cells):
+            if not has_row_label_col and value == heading:
+                continue
+            bullets.append(f"• {header}: {value}")
+
+        group_lines = [f"**{heading}**", *bullets]
+        rendered_groups.append("\n".join(group_lines))
+
+    return "\n\n".join(rendered_groups)
+
+
+def _convert_table_to_bullets(text: str) -> str:
+    if '|' not in text or '-' not in text:
+        return text
+
+    lines = text.split('\n')
+    out: list[str] = []
+    in_fence = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.lstrip()
+
+        if stripped.startswith('```'):
+            in_fence = not in_fence
+            out.append(line)
+            i += 1
+            continue
+        if in_fence:
+            out.append(line)
+            i += 1
+            continue
+
+        if (
+            '|' in line
+            and i + 1 < len(lines)
+            and _TABLE_SEPARATOR_RE.match(lines[i + 1])
+        ):
+            table_block = [line, lines[i + 1]]
+            j = i + 2
+            while j < len(lines) and _is_table_row(lines[j]):
+                table_block.append(lines[j])
+                j += 1
+            out.append(_render_table_block(table_block))
+            i = j
+            continue
+
+        out.append(line)
+        i += 1
+
+    return '\n'.join(out)
+
 
 def _custom_unit_to_cp(s: str, budget: int, len_fn: Callable[[str], int]) -> int:
     if len_fn(s) <= budget:
@@ -141,6 +243,9 @@ def format_message(content: str) -> str:
         return key
 
     text = content
+
+    # 0) Convert GFM pipe tables to bold-heading + bullet groups
+    text = _convert_table_to_bullets(text)
 
     # 1) Protect fenced code blocks
     def _protect_fenced(m):
