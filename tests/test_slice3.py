@@ -7,9 +7,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport
 
 from src.adapters.base import SendResult
-from src.adapters.registry import registry
 from src.bus import (
-    Event,
     get_incoming_bus,
     get_out_coming_bus,
     get_webhook_incoming_bus,
