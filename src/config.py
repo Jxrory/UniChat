@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ from typing import Any
 
 import yaml
 
+logger = logging.getLogger("unichat.config")
 
 _ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
 
@@ -44,6 +46,7 @@ class ServerConfig:
     host: str
     port: int
     admin_token: str
+    log_level: str = "DEBUG"
 
 
 @dataclass
@@ -61,8 +64,13 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
     if db_url is None:
         db_url = resolved["database"]["url"]
 
-    return AppConfig(
+    log_level = os.environ.get("LOG_LEVEL") or resolved["server"].get("log_level", "DEBUG")
+
+    cfg = AppConfig(
         inboxes=[InboxConfig(**ib) for ib in resolved["inboxes"]],
         server=ServerConfig(**resolved["server"]),
         database_url=db_url,
     )
+    cfg.server.log_level = log_level
+    logger.debug("Config loaded: %d inbox(es), db=%s, log_level=%s", len(cfg.inboxes), cfg.database_url, cfg.server.log_level)
+    return cfg

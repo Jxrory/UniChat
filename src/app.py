@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -8,11 +9,14 @@ from src.adapters.telegram import register as register_telegram
 from src.bus import init_buses, get_webhook_incoming_bus, get_incoming_bus, get_out_coming_bus
 from src.config import AppConfig, load_config
 from src.db import create_all, dispose_engine, init_db
+from src.log_setup import setup_logging
 from src.routes.webhook import router as webhook_router
 from src.routes.reply import router as reply_router
 from src.services.ingest import IngestService
 from src.services.notifier import AgentBotNotifier
 from src.services.sender import ChannelSender
+
+logger = logging.getLogger("unichat.app")
 
 register_telegram()
 
@@ -23,6 +27,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        setup_logging(config.server.log_level)
+        logger.info("Starting UniChat — log_level=%s", config.server.log_level)
+
         init_db(config.database_url)
         create_all()
         init_buses()
@@ -44,6 +51,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         bg_task2 = asyncio.create_task(incoming_bus.run())
         bg_task3 = asyncio.create_task(out_coming_bus.run())
 
+        logger.info("UniChat shutting down")
         yield
 
         bg_task.cancel()

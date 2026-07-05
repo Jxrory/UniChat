@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -7,17 +8,24 @@ from src.db import get_session
 from src.models import Contact, Conversation, Message
 from src.services.state_machine import validate_transition
 
+logger = logging.getLogger("unichat.ingest")
+
 
 class IngestService:
     async def start(self) -> None:
         bus = get_webhook_incoming_bus()
         bus.subscribe("WebhookIncoming", self._handle)
+        logger.debug("IngestService subscribed to WebhookIncoming")
 
     async def _handle(self, event: Event) -> None:
         webhook_event: WebhookEvent = event.payload
         session = get_session()
         try:
             update_id = str(webhook_event.raw.get("update_id", ""))
+            logger.debug(
+                "Ingesting webhook event: inbox=%s update_id=%s content=%.50s",
+                webhook_event.inbox_id, update_id, webhook_event.content,
+            )
 
             existing = (
                 session.query(Message)
@@ -28,6 +36,7 @@ class IngestService:
                 .first()
             )
             if existing is not None:
+                logger.debug("Duplicate message skipped: inbox=%s source_id=%s", webhook_event.inbox_id, update_id)
                 return
 
             contact = self._find_or_create_contact(session, webhook_event)
@@ -53,6 +62,11 @@ class IngestService:
 
             session.commit()
 
+            logger.info(
+                "Message ingested: msg_id=%s contact_id=%s conversation_id=%s",
+                msg.id, contact.id, conversation.id,
+            )
+
             incoming_bus = get_incoming_bus()
             await incoming_bus.publish("Incoming", msg.id)
         finally:
@@ -70,6 +84,7 @@ class IngestService:
             .first()
         )
         if contact is not None:
+            logger.debug("Contact found: id=%s name=%s", contact.id, contact.name)
             return contact
 
         sender_info = webhook_event.raw.get("message", {}).get("from", {})
@@ -86,6 +101,7 @@ class IngestService:
         )
         session.add(contact)
         session.flush()
+        logger.info("Contact created: id=%s inbox=%s source_id=%s name=%s", contact.id, webhook_event.inbox_id, webhook_event.source_id, name)
         return contact
 
     def _find_or_create_conversation(
@@ -101,10 +117,12 @@ class IngestService:
             .first()
         )
         if conversation is not None:
+            logger.debug("Conversation found: id=%s status=%s", conversation.id, conversation.status)
             if validate_transition(conversation.status, "active"):
                 conversation.status = "active"
                 conversation.last_activity_at = datetime.now(timezone.utc)
                 session.flush()
+                logger.debug("Conversation re-activated: id=%s (was %s)", conversation.id, conversation.status)
             return conversation
 
         conversation = Conversation(
@@ -115,4 +133,5 @@ class IngestService:
         )
         session.add(conversation)
         session.flush()
+        logger.info("Conversation created: id=%s contact_id=%s inbox=%s", conversation.id, contact.id, webhook_event.inbox_id)
         return conversation

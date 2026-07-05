@@ -13,6 +13,7 @@ inboxes:
 server:
   host: "0.0.0.0"
   port: 8000
+  log_level: "DEBUG"
   admin_token: "${ADMIN_TOKEN}"
 
 database:

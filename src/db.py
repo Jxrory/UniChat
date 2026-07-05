@@ -1,5 +1,9 @@
+import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+logger = logging.getLogger("unichat.db")
 
 _engine = None
 _SessionLocal: sessionmaker[Session] | None = None
@@ -11,14 +15,17 @@ class Base(DeclarativeBase):
 
 def init_db(database_url: str) -> None:
     global _engine, _SessionLocal
+    logger.info("Initializing database: %s", database_url)
     _engine = create_engine(database_url, echo=False)
     _SessionLocal = sessionmaker(bind=_engine)
+    logger.debug("Database engine created")
 
 
 def create_all() -> None:
     if _engine is None:
         raise RuntimeError("init_db() must be called before create_all()")
     Base.metadata.create_all(_engine)
+    logger.info("Database tables created")
 
 
 def get_session() -> Session:
@@ -31,5 +38,6 @@ def dispose_engine() -> None:
     global _engine, _SessionLocal
     if _engine is not None:
         _engine.dispose()
+        logger.debug("Database engine disposed")
     _engine = None
     _SessionLocal = None

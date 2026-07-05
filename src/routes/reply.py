@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
@@ -9,6 +10,7 @@ from src.models import Conversation, Message
 from src.services.reply_receiver import ReplyReceiver
 from src.services.state_machine import validate_transition
 
+logger = logging.getLogger("unichat.reply")
 router = APIRouter()
 
 
@@ -25,9 +27,11 @@ def _verify_admin_token(request: Request) -> str | None:
 @router.post("/api/v1/agentbot/reply")
 async def agentbot_reply(request: Request) -> JSONResponse:
     if _verify_admin_token(request) is None:
+        logger.warning("AgentBot reply unauthorized")
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
 
     body = await request.json()
+    logger.debug("AgentBot reply request body: %s", body)
     conversation_id = body.get("conversation_id")
     content = body.get("content")
     handoff = body.get("handoff", False)
@@ -37,6 +41,8 @@ async def agentbot_reply(request: Request) -> JSONResponse:
         return JSONResponse(
             status_code=400, content={"error": "missing required fields"}
         )
+
+    logger.info("AgentBot reply: conversation=%s handoff=%s content=%s", conversation_id, handoff, content)
 
     receiver = ReplyReceiver()
     result = await receiver.handle_reply(
@@ -48,23 +54,29 @@ async def agentbot_reply(request: Request) -> JSONResponse:
 
     status_code: int = result.get("status_code", 200)  # type: ignore[assignment]
     if status_code != 200:
+        logger.warning("AgentBot reply rejected: conversation=%s reason=%s", conversation_id, result.get("error"))
         return JSONResponse(status_code=status_code, content=result)
 
+    logger.info("AgentBot reply handled: message_id=%s", result["message_id"])
     return JSONResponse(status_code=200, content={"ok": True, "message_id": result["message_id"]})
 
 
 @router.post("/api/v1/conversations/{conversation_id}/reply")
 async def user_reply(conversation_id: str, request: Request) -> JSONResponse:
     if _verify_admin_token(request) is None:
+        logger.warning("User reply unauthorized: conversation=%s", conversation_id)
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
 
     body = await request.json()
+    logger.debug("User reply request body: %s", body)
     content = body.get("content")
 
     if not content:
         return JSONResponse(
             status_code=400, content={"error": "missing required fields"}
         )
+
+    logger.info("User reply: conversation=%s content=%s", conversation_id, content)
 
     receiver = ReplyReceiver()
     result = await receiver.handle_reply(
@@ -79,12 +91,14 @@ async def user_reply(conversation_id: str, request: Request) -> JSONResponse:
     if status_code != 200:
         return JSONResponse(status_code=status_code, content=result)
 
+    logger.info("User reply handled: message_id=%s", result["message_id"])
     return JSONResponse(status_code=200, content={"ok": True, "message_id": result["message_id"]})
 
 
 @router.post("/api/v1/conversations/{conversation_id}/resolve")
 async def resolve_conversation(conversation_id: str, request: Request) -> JSONResponse:
     if _verify_admin_token(request) is None:
+        logger.warning("Resolve unauthorized: conversation=%s", conversation_id)
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
 
     session = get_session()
@@ -95,12 +109,14 @@ async def resolve_conversation(conversation_id: str, request: Request) -> JSONRe
             .first()
         )
         if not conversation:
+            logger.warning("Resolve failed — conversation not found: %s", conversation_id)
             return JSONResponse(status_code=404, content={"error": "conversation not found"})
 
         # 409 chosen over 200-noop: the caller sent a mutating request that had no
         # effect, so an error status is more honest than a success response.
         # Status is never silently corrupted.
         if not validate_transition(conversation.status, "resolved"):
+            logger.warning("Resolve rejected: conversation=%s status=%s", conversation_id, conversation.status)
             return JSONResponse(
                 status_code=409,
                 content={
@@ -112,6 +128,7 @@ async def resolve_conversation(conversation_id: str, request: Request) -> JSONRe
         conversation.last_activity_at = datetime.now(timezone.utc)
         session.commit()
 
+        logger.info("Conversation resolved: id=%s", conversation_id)
         return JSONResponse(status_code=200, content={"ok": True})
     finally:
         session.close()
@@ -138,6 +155,8 @@ async def get_conversation_messages(conversation_id: str, request: Request) -> J
             .order_by(Message.created_at.asc())
             .all()
         )
+
+        logger.debug("Messages fetched: conversation=%s count=%d", conversation_id, len(messages))
 
         return JSONResponse(
             status_code=200,

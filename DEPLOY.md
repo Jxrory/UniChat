@@ -18,6 +18,7 @@
 | `AGENTBOT_TOKEN` | 是 | AgentBot 认证 token |
 | `ADMIN_TOKEN` | 是 | 管理 API 认证 token |
 | `DATABASE_URL` | 否 | 数据库连接串。默认 SQLite `sqlite+aiosqlite:///./unichat.db`（见 `config.yaml`） |
+| `LOG_LEVEL` | 否 | 日志级别：`DEBUG`（开发）或 `INFO`（生产）。默认 `DEBUG`。见 `config.yaml` `server.log_level` |
 
 ## 部署步骤
 
