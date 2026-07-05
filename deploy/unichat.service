@@ -1,0 +1,22 @@
+[Unit]
+Description=UniChat 消息聚合平台
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=unichat
+Group=unichat
+WorkingDirectory=/opt/unichat
+EnvironmentFile=-/opt/unichat/.env
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+ExecStart=uv run uvicorn src.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
