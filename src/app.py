@@ -9,7 +9,10 @@ from src.bus import init_buses, get_webhook_incoming_bus, get_incoming_bus, get_
 from src.config import AppConfig, load_config
 from src.db import create_all, dispose_engine, init_db
 from src.routes.webhook import router as webhook_router
+from src.routes.reply import router as reply_router
 from src.services.ingest import IngestService
+from src.services.notifier import AgentBotNotifier
+from src.services.sender import ChannelSender
 
 register_telegram()
 
@@ -26,6 +29,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
         ingest_service = IngestService()
         await ingest_service.start()
+
+        notifier = AgentBotNotifier(config)
+        await notifier.start()
+
+        sender = ChannelSender(config)
+        await sender.start()
 
         webhook_bus = get_webhook_incoming_bus()
         incoming_bus = get_incoming_bus()
@@ -51,5 +60,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.config = config
 
     app.include_router(webhook_router)
+    app.include_router(reply_router)
 
     return app
