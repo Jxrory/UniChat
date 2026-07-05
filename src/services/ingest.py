@@ -5,6 +5,7 @@ from src.adapters.base import WebhookEvent
 from src.bus import Event, get_incoming_bus, get_webhook_incoming_bus
 from src.db import get_session
 from src.models import Contact, Conversation, Message
+from src.services.state_machine import validate_transition
 
 
 class IngestService:
@@ -95,12 +96,15 @@ class IngestService:
             .filter(
                 Conversation.contact_id == contact.id,
                 Conversation.inbox_id == webhook_event.inbox_id,
-                Conversation.status == "active",
             )
             .order_by(Conversation.created_at.desc())
             .first()
         )
         if conversation is not None:
+            if validate_transition(conversation.status, "active"):
+                conversation.status = "active"
+                conversation.last_activity_at = datetime.now(timezone.utc)
+                session.flush()
             return conversation
 
         conversation = Conversation(

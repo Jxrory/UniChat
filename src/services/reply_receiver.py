@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from src.bus import get_out_coming_bus
 from src.db import get_session
 from src.models import Conversation, Message
+from src.services.state_machine import validate_transition
 
 
 class ReplyReceiver:
@@ -12,6 +13,7 @@ class ReplyReceiver:
         content: str,
         handoff: bool = False,
         source_id: str | None = None,
+        sender_type: str = "agentbot",
     ) -> dict[str, str | int | bool]:
         session = get_session()
         try:
@@ -38,7 +40,7 @@ class ReplyReceiver:
             msg = Message(
                 conversation_id=conversation.id,
                 inbox_id=conversation.inbox_id,
-                sender_type="agentbot",
+                sender_type=sender_type,
                 sender_id=None,
                 content=content,
                 content_type="text",
@@ -52,7 +54,12 @@ class ReplyReceiver:
 
             now = datetime.now(timezone.utc)
             conversation.last_activity_at = now
-            if handoff:
+            if sender_type == "agentbot" and handoff:
+                if not validate_transition(conversation.status, "pending_human"):
+                    return {
+                        "error": f"cannot handoff conversation in status '{conversation.status}'",
+                        "status_code": 409,
+                    }
                 conversation.status = "pending_human"
 
             session.commit()
