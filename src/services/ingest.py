@@ -5,7 +5,7 @@ from typing import Any
 from src.adapters.base import WebhookEvent
 from src.bus import Event, get_incoming_bus, get_webhook_incoming_bus
 from src.db import get_session
-from src.models import Contact, Conversation, Message
+from src.models import Contact, ContactInbox, Conversation, Message
 from src.services.state_machine import validate_transition
 
 logger = logging.getLogger("unichat.ingest")
@@ -75,15 +75,16 @@ class IngestService:
     def _find_or_create_contact(
         self, session: Any, webhook_event: WebhookEvent
     ) -> Contact:
-        contact: Contact | None = (
-            session.query(Contact)
+        ci: ContactInbox | None = (
+            session.query(ContactInbox)
             .filter(
-                Contact.inbox_id == webhook_event.inbox_id,
-                Contact.source_id == webhook_event.source_id,
+                ContactInbox.inbox_id == webhook_event.inbox_id,
+                ContactInbox.source_id == webhook_event.source_id,
             )
             .first()
         )
-        if contact is not None:
+        if ci is not None:
+            contact = ci.contact
             logger.debug("Contact found: id=%s name=%s", contact.id, contact.name)
             return contact
 
@@ -93,13 +94,20 @@ class IngestService:
         avatar_url = sender_info.get("photo_url")
 
         contact = Contact(
-            inbox_id=webhook_event.inbox_id,
             source_id=webhook_event.source_id,
             name=name,
             avatar_url=avatar_url,
             last_activity_at=datetime.now(timezone.utc),
         )
         session.add(contact)
+        session.flush()
+
+        ci = ContactInbox(
+            contact_id=contact.id,
+            inbox_id=webhook_event.inbox_id,
+            source_id=webhook_event.source_id,
+        )
+        session.add(ci)
         session.flush()
         logger.info("Contact created: id=%s inbox=%s source_id=%s name=%s", contact.id, webhook_event.inbox_id, webhook_event.source_id, name)
         return contact

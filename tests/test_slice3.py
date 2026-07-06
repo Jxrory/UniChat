@@ -15,7 +15,7 @@ from src.bus import (
 )
 from src.config import AppConfig, InboxConfig, ServerConfig
 from src.db import create_all, dispose_engine, get_session, init_db
-from src.models import Contact, Conversation, Message
+from src.models import Contact, ContactInbox, Conversation, Message
 from src.services.state_machine import VALID_TRANSITIONS, validate_transition
 
 _TEST_INBOXES = [
@@ -99,8 +99,11 @@ async def client(app: FastAPI) -> AsyncGenerator[httpx.AsyncClient, Any]:
 
 
 async def _create_active_conversation(session: Any) -> tuple[str, str]:
-    contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+    contact = Contact(source_id="12345", name="Test")
     session.add(contact)
+    session.flush()
+    ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+    session.add(ci)
     session.flush()
 
     conversation = Conversation(
@@ -232,8 +235,11 @@ class TestManualReply:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="pending_human"
@@ -351,8 +357,11 @@ class TestResolve:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="pending_human"
@@ -383,8 +392,11 @@ class TestResolve:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="resolved"
@@ -450,8 +462,11 @@ class TestMessagesHistory:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="active"
@@ -556,8 +571,11 @@ class TestReopen:
     ) -> tuple[str, str, str]:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -732,8 +750,11 @@ class TestHandoffValidation:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="resolved"
@@ -769,8 +790,11 @@ class TestHandoffValidation:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="pending_human"
@@ -844,8 +868,11 @@ class TestFullHandoffFlow:
 
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conversation = Conversation(
                 inbox_id="tg", contact_id=contact.id, status="active"

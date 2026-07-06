@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from src.config import AppConfig, InboxConfig, ServerConfig
 from src.db import create_all, dispose_engine, get_session, init_db
-from src.models import Contact, Conversation, Message
+from src.models import Contact, ContactInbox, Conversation, Message
 
 _TEST_INBOXES = [
     InboxConfig(
@@ -138,8 +138,11 @@ class TestAdminConversationList:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test User")
+            contact = Contact(source_id="12345", name="Test User")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conv = Conversation(inbox_id="tg", contact_id=contact.id, status="active")
             session.add(conv)
@@ -183,8 +186,11 @@ class TestAdminMessageTimeline:
 
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conv = Conversation(inbox_id="tg", contact_id=contact.id, status="active")
             session.add(conv)
@@ -229,8 +235,11 @@ class TestAdminReplyFlow:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conv = Conversation(inbox_id="tg", contact_id=contact.id, status="active")
             session.add(conv)
@@ -268,8 +277,11 @@ class TestAdminReplyFlow:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(inbox_id="tg", source_id="12345", name="Test")
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
             conv = Conversation(inbox_id="tg", contact_id=contact.id, status="active")
             session.add(conv)

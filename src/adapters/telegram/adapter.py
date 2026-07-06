@@ -19,7 +19,7 @@ class TelegramAdapter(ChannelAdapter):
         super().__init__(inbox_id, config)
         self._rich_send_disabled: bool = False
 
-    def verify_webhook(self, headers: dict[str, str], body: bytes) -> bool:
+    def verify_webhook(self, params: dict[str, str], headers: dict[str, str], body: bytes) -> bool:
         expected: str | None = self.config.get("webhook_secret")
         if not expected:
             logger.warning("webhook_secret not configured for inbox=%s", self.inbox_id)

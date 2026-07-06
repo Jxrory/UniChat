@@ -20,7 +20,7 @@ from src.bus import (
 )
 from src.config import AppConfig, InboxConfig, ServerConfig
 from src.db import create_all, dispose_engine, get_session, init_db
-from src.models import Contact, Conversation, Message
+from src.models import Contact, ContactInbox, Conversation, Message
 
 _TEST_INBOXES = [
     InboxConfig(
@@ -180,8 +180,12 @@ class TestWebhookRoute:
         try:
             contacts = session.query(Contact).all()
             assert len(contacts) == 1
-            assert contacts[0].inbox_id == "tg"
             assert contacts[0].source_id == "12345"
+            cis = session.query(ContactInbox).all()
+            assert len(cis) == 1
+            assert cis[0].inbox_id == "tg"
+            assert cis[0].source_id == "12345"
+            assert cis[0].contact_id == contacts[0].id
 
             conversations = session.query(Conversation).all()
             assert len(conversations) == 1
@@ -464,7 +468,7 @@ class TestTelegramAdapter:
         )
 
         assert adapter.verify_webhook(
-            {"X-Telegram-Bot-Api-Secret-Token": "my-secret"}, b"{}"
+            {}, {"X-Telegram-Bot-Api-Secret-Token": "my-secret"}, b"{}"
         )
 
     def test_verify_webhook_invalid(self) -> None:
@@ -476,7 +480,7 @@ class TestTelegramAdapter:
         )
 
         assert not adapter.verify_webhook(
-            {"X-Telegram-Bot-Api-Secret-Token": "wrong"}, b"{}"
+            {}, {"X-Telegram-Bot-Api-Secret-Token": "wrong"}, b"{}"
         )
 
     def test_verify_webhook_missing_header(self) -> None:
@@ -487,7 +491,7 @@ class TestTelegramAdapter:
             config={"webhook_secret": "my-secret", "token": "tok"},
         )
 
-        assert not adapter.verify_webhook({}, b"{}")
+        assert not adapter.verify_webhook({}, {}, b"{}")
 
     def test_parse_webhook_valid_private_text(self) -> None:
         from src.adapters.telegram.adapter import TelegramAdapter
@@ -781,10 +785,11 @@ class TestReplyRoute:
 
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -839,10 +844,11 @@ class TestReplyRoute:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -892,10 +898,11 @@ class TestReplyRoute:
     ) -> None:
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -1001,10 +1008,11 @@ class TestChannelSender:
 
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -1055,10 +1063,11 @@ class TestChannelSender:
 
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -1109,10 +1118,11 @@ class TestChannelSender:
 
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(
@@ -1159,10 +1169,11 @@ class TestEchoPrevention:
 
         session = get_session()
         try:
-            contact = Contact(
-                inbox_id="tg", source_id="12345", name="Test"
-            )
+            contact = Contact(source_id="12345", name="Test")
             session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
             session.flush()
 
             conversation = Conversation(

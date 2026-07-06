@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db import Base
@@ -19,8 +19,7 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    inbox_id: Mapped[str] = mapped_column(String, nullable=False)
-    source_id: Mapped[str] = mapped_column(String, nullable=False)
+    source_id: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     name: Mapped[str | None] = mapped_column(String, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
     last_activity_at: Mapped[datetime] = mapped_column(
@@ -30,11 +29,8 @@ class Contact(Base):
         DateTime(timezone=True), nullable=False, default=_now
     )
 
-    __table_args__ = (
-        Index(None, "inbox_id", "source_id", unique=True),
-    )
-
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="contact")
+    contact_inboxes: Mapped[list["ContactInbox"]] = relationship(back_populates="contact")
 
 
 class Conversation(Base):
@@ -60,6 +56,27 @@ class Conversation(Base):
 
 
 Index(None, Conversation.contact_id, Conversation.created_at.desc())
+
+
+class ContactInbox(Base):
+    __tablename__ = "contact_inboxes"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    contact_id: Mapped[str] = mapped_column(
+        String, ForeignKey("contacts.id"), nullable=False
+    )
+    inbox_id: Mapped[str] = mapped_column(String, nullable=False)
+    source_id: Mapped[str] = mapped_column(String, nullable=False)
+    source_info: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_now
+    )
+
+    contact: Mapped["Contact"] = relationship(back_populates="contact_inboxes")
+
+    __table_args__ = (
+        UniqueConstraint("inbox_id", "source_id", name="uq_contact_inbox_source"),
+    )
 
 
 class Message(Base):

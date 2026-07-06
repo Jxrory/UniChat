@@ -31,7 +31,7 @@ async def telegram_webhook(inbox_id: str, request: Request) -> Response:
     body = await request.body()
     logger.debug("Webhook raw request: inbox=%s headers=%s body=%s", inbox_id, {k: v for k, v in headers.items() if k.lower() not in ("authorization", "x-telegram-bot-api-secret-token")}, body.decode("utf-8", errors="replace"))
 
-    if not adapter.verify_webhook(headers, body):
+    if not adapter.verify_webhook({}, headers, body):
         logger.warning("Webhook verification failed: inbox=%s", inbox_id)
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
 
