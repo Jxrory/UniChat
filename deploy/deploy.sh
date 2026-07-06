@@ -44,7 +44,6 @@ echo "[remote] Pulling latest code..."
 sudo -u unichat /usr/bin/git -C /opt/unichat pull
 
 echo "[remote] Syncing dependencies..."
-cd /opt/unichat
 sudo -u unichat /usr/bin/uv sync --frozen
 
 echo "[remote] Restarting service..."
