@@ -1,0 +1,55 @@
+{% if conversation %}
+<div class="msg-container">
+    {% if resolve_error %}
+    <div class="reply-error show">{{ resolve_error }}</div>
+    {% endif %}
+    <div style="padding: 12px 24px; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 12px;">
+        <span class="badge badge-{{ conversation.status }}" id="conv-status">{{ conversation.status }}</span>
+        <span style="font-size: 13px; color: var(--color-text-secondary);">{{ conversation.inbox_id }}</span>
+        <div style="margin-left: auto;">
+            <form hx-post="/admin/conversations/{{ conversation.id }}/resolve"
+                  hx-target="#message-panel"
+                  hx-swap="innerHTML"
+                  hx-trigger="submit">
+                <button class="btn btn-secondary btn-sm" type="submit" {% if conversation.status == 'resolved' %}disabled{% endif %}>关闭对话</button>
+            </form>
+        </div>
+    </div>
+    {% for msg in messages %}
+        {% if msg.message_type == 'activity' %}
+        <div class="msg-bubble-activity">— {{ msg.content }} —</div>
+        {% elif msg.sender_type == 'contact' %}
+        <div class="msg-bubble msg-bubble-contact">
+            {{ msg.content }}
+            <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
+        </div>
+        {% elif msg.sender_type == 'agentbot' %}
+        <div class="msg-bubble msg-bubble-agentbot">
+            {% if msg.handoff %}[转人工] {% endif %}{{ msg.content }}
+            <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
+        </div>
+        {% elif msg.sender_type == 'user' %}
+        <div class="msg-bubble msg-bubble-user">
+            {{ msg.content }}
+            <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+<div class="reply-area">
+    {% if reply_error %}
+    <div class="reply-error show">{{ reply_error }}</div>
+    {% endif %}
+    <div id="reply-error"></div>
+    <form class="reply-form"
+          hx-post="/admin/conversations/{{ conversation.id }}/reply"
+          hx-target="#message-panel"
+          hx-swap="innerHTML"
+          hx-trigger="submit">
+        <input class="input" type="text" name="content" placeholder="输入回复..." required autofocus>
+        <button class="btn btn-primary" type="submit">发送</button>
+    </form>
+</div>
+{% else %}
+<div class="empty-state">选择左侧对话查看消息</div>
+{% endif %}

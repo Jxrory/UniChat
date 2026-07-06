@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}UniChat — 登录{% endblock %}
+{% block nav %}{% endblock %}
+{% block content %}
+<div class="login-page">
+    <div class="login-card">
+        <h1>UniChat</h1>
+        <form method="post" action="/admin/login">
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+            <input class="input" type="password" name="token" placeholder="输入管理员 Token" autofocus>
+            <button class="btn btn-primary" type="submit">登录</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
