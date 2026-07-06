@@ -143,26 +143,6 @@ sudo -l -U deploy
 | `DEPLOY_PORT` | SSH 端口（默认 `22`，选填） |
 | `DEPLOY_SSH_KEY` | **私钥内容** (`cat ~/.ssh/deploy_key` 的输出） |
 
-### 使用 SSH config alias（可选）
-
-本地 `deploy/deploy.sh` 支持 SSH config alias。在 `~/.ssh/config` 添加：
-
-```
-Host unichat
-    HostName 203.0.113.10
-    User deploy
-    Port 22
-    IdentityFile ~/.ssh/deploy_key
-```
-
-然后本地部署：
-
-```bash
-export DEPLOY_HOST=unichat
-./deploy/deploy.sh          # 实际部署
-./deploy/deploy.sh --dry-run  # 预览
-```
-
 ---
 
 ## 四、验证 CD 流程
@@ -214,13 +194,6 @@ sudo journalctl -u unichat -f
 
 ```bash
 git commit -m "docs: typo fix [skip ci]"
-```
-
-### 本地手动部署（不走 GitHub Actions）
-
-```bash
-export DEPLOY_HOST=unichat  # SSH config alias
-./deploy/deploy.sh
 ```
 
 ---
