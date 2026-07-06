@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, AsyncGenerator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -41,6 +41,8 @@ _TEST_INBOXES = [
         channel_type="whatsapp",
         config={
             "webhook_secret": "test-wa-secret",
+            "phone_number_id": "123456789",
+            "token": "test-wa-token",
         },
     ),
 ]
@@ -1171,6 +1173,136 @@ class TestChannelSender:
             await out_bus._dispatch(ev)
 
             send_mock.assert_not_called()
+
+    async def test_whatsapp_sender_calls_api_and_updates_status(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        _subscribe_sender()
+
+        session = get_session()
+        try:
+            contact = Contact(source_id="5511999999999", name="WA User")
+            session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="wa", source_id="5511999999999")
+            session.add(ci)
+            session.flush()
+
+            conversation = Conversation(
+                inbox_id="wa",
+                contact_id=contact.id,
+                status="active",
+            )
+            session.add(conversation)
+            session.flush()
+
+            msg = Message(
+                conversation_id=conversation.id,
+                inbox_id="wa",
+                sender_type="agentbot",
+                message_type="outgoing",
+                content="Hello from bot",
+                status="pending",
+            )
+            session.add(msg)
+            session.commit()
+            msg_id = msg.id
+        finally:
+            session.close()
+
+        mock_response = MagicMock()
+        mock_response.is_success = True
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"messages": [{"id": "wamid.sent123"}]}
+        mock_response.text = ""
+
+        client_mock = AsyncMock(spec=httpx.AsyncClient)
+        client_mock.post.return_value = mock_response
+
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = client_mock
+
+            out_bus = get_out_coming_bus()
+            await out_bus.publish("OutComing", msg_id)
+            ev = await out_bus._queue.get()
+            await out_bus._dispatch(ev)
+
+        client_mock.post.assert_called_once()
+        args, kwargs = client_mock.post.call_args
+        assert args[0] == "https://graph.facebook.com/v20.0/123456789/messages"
+        assert kwargs["headers"]["Authorization"] == "Bearer test-wa-token"
+        assert kwargs["json"]["to"] == "5511999999999"
+        assert kwargs["json"]["text"]["body"] == "Hello from bot"
+
+        session = get_session()
+        try:
+            updated = session.query(Message).filter(Message.id == msg_id).first()
+            assert updated is not None
+            assert updated.status == "sent"
+            assert updated.source_id == "wamid.sent123"
+        finally:
+            session.close()
+
+    async def test_whatsapp_sender_marks_failed_on_api_error(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        _subscribe_sender()
+
+        session = get_session()
+        try:
+            contact = Contact(source_id="5511999999999", name="WA User")
+            session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="wa", source_id="5511999999999")
+            session.add(ci)
+            session.flush()
+
+            conversation = Conversation(
+                inbox_id="wa",
+                contact_id=contact.id,
+                status="active",
+            )
+            session.add(conversation)
+            session.flush()
+
+            msg = Message(
+                conversation_id=conversation.id,
+                inbox_id="wa",
+                sender_type="agentbot",
+                message_type="outgoing",
+                content="Bot reply",
+                status="pending",
+            )
+            session.add(msg)
+            session.commit()
+            msg_id = msg.id
+        finally:
+            session.close()
+
+        mock_response = MagicMock()
+        mock_response.is_success = False
+        mock_response.status_code = 400
+        mock_response.text = '{"error": {"message": "Bad request"}}'
+
+        client_mock = AsyncMock(spec=httpx.AsyncClient)
+        client_mock.post.return_value = mock_response
+
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = client_mock
+
+            out_bus = get_out_coming_bus()
+            await out_bus.publish("OutComing", msg_id)
+            ev = await out_bus._queue.get()
+            await out_bus._dispatch(ev)
+
+        session = get_session()
+        try:
+            updated = session.query(Message).filter(Message.id == msg_id).first()
+            assert updated is not None
+            assert updated.status == "failed"
+            assert "Bad request" in updated.external_error
+        finally:
+            session.close()
 
 
 def _wa_payload(
