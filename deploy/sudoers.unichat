@@ -4,8 +4,9 @@
 # 限制 deploy 用户只能执行部署所需的特定命令。
 # 替换 deploy 为你的 SSH 登录用户名。
 
-# 允许执行 git pull 和检出
+# 允许执行 git pull、检查状态、检出
 deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat pull
+deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat status
 deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat checkout *
 deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat reset *
 
