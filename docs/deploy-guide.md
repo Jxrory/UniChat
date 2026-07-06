@@ -101,7 +101,7 @@ sudo passwd deploy  # 或 sudo passwd -d deploy 禁用密码
 在**本地机器**生成部署专用密钥对（不要用个人密钥）：
 
 ```bash
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/deploy_key -N ""
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/deploy/github_actions_deploy_key -N ""
 ```
 
 将公钥添加到服务器：
@@ -114,8 +114,12 @@ ssh-copy-id -i ~/.ssh/deploy_key deploy@<服务器IP>
 
 ```bash
 # 在服务器上执行
-sudo visudo -f /etc/sudoers.d/unichat-deploy < /opt/unichat/deploy/sudoers.unichat
+sudo cp /opt/unichat/deploy/sudoers.unichat /etc/sudoers.d/unichat-deploy
+sudo visudo -c -f /etc/sudoers.d/unichat-deploy  # 校验语法
+sudo chmod 440 /etc/sudoers.d/unichat-deploy
 ```
+
+> `visudo` 不接受重定向输入。正确做法是 `cp` 后 `visudo -c` 校验。
 
 如果 `deploy` 用户不是 `deploy`（比如是 `root`），先编辑 `deploy/sudoers.unichat` 把第一行的 `deploy` 改为实际用户名，再复制到服务器执行。
 
