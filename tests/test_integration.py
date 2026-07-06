@@ -21,6 +21,7 @@ from src.bus import (
 from src.config import AppConfig, InboxConfig, ServerConfig
 from src.db import create_all, dispose_engine, get_session, init_db
 from src.models import Contact, ContactInbox, Conversation, Message
+from tests.wa_helpers import wa_payload, wa_status_payload
 
 _TEST_INBOXES = [
     InboxConfig(
@@ -43,6 +44,8 @@ _TEST_INBOXES = [
             "webhook_secret": "test-wa-secret",
             "phone_number_id": "123456789",
             "token": "test-wa-token",
+            "agentbot_url": "http://localhost:9999",
+            "agentbot_token": "test-agentbot-token",
         },
     ),
 ]
@@ -1305,50 +1308,6 @@ class TestChannelSender:
             session.close()
 
 
-def _wa_payload(
-    from_number: str = "5511999999999",
-    text: str = "Hello",
-    msg_type: str = "text",
-    msg_id: str = "wamid.ABC123",
-) -> bytes:
-    msg: dict[str, Any] = {"from": from_number, "id": msg_id, "timestamp": "1700000000", "type": msg_type}
-    if msg_type == "text":
-        msg["text"] = {"body": text}
-
-    return json.dumps({
-        "object": "whatsapp_business_account",
-        "entry": [{
-            "id": "123456789",
-            "changes": [{
-                "value": {
-                    "messaging_product": "whatsapp",
-                    "metadata": {"display_phone_number": "16505551111", "phone_number_id": "123456789"},
-                    "contacts": [{"profile": {"name": "Test User"}, "wa_id": from_number}],
-                    "messages": [msg],
-                },
-                "field": "messages",
-            }],
-        }],
-    }).encode()
-
-
-def _wa_status_payload() -> bytes:
-    return json.dumps({
-        "object": "whatsapp_business_account",
-        "entry": [{
-            "id": "123456789",
-            "changes": [{
-                "value": {
-                    "messaging_product": "whatsapp",
-                    "metadata": {"display_phone_number": "16505551111", "phone_number_id": "123456789"},
-                    "statuses": [{"id": "wamid.status123", "status": "sent", "timestamp": "1700000001", "recipient_id": "5511999999999"}],
-                },
-                "field": "messages",
-            }],
-        }],
-    }).encode()
-
-
 class TestWhatsAppWebhookRoute:
     async def test_get_challenge_with_correct_token(self, client: httpx.AsyncClient) -> None:
         resp = await client.get(
@@ -1370,7 +1329,7 @@ class TestWhatsAppWebhookRoute:
 
         resp = await client.post(
             "/webhooks/whatsapp/wa",
-            content=_wa_payload(),
+            content=wa_payload(),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -1410,7 +1369,7 @@ class TestWhatsAppWebhookRoute:
 
         resp = await client.post(
             "/webhooks/whatsapp/wa",
-            content=_wa_status_payload(),
+            content=wa_status_payload(),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -1429,7 +1388,7 @@ class TestWhatsAppWebhookRoute:
 
         resp = await client.post(
             "/webhooks/whatsapp/wa",
-            content=_wa_payload(msg_type="image"),
+            content=wa_payload(msg_type="image"),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -1446,14 +1405,14 @@ class TestWhatsAppWebhookRoute:
     async def test_post_unknown_inbox_returns_404(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(
             "/webhooks/whatsapp/unknown",
-            content=_wa_payload(),
+            content=wa_payload(),
         )
         assert resp.status_code == 404
 
     async def test_duplicate_message_id_creates_only_one_message(self, client: httpx.AsyncClient) -> None:
         _subscribe_ingest()
 
-        payload = _wa_payload(msg_id="wamid.dup-1")
+        payload = wa_payload(msg_id="wamid.dup-1")
 
         resp1 = await client.post("/webhooks/whatsapp/wa", content=payload)
         assert resp1.status_code == 200
@@ -1473,9 +1432,9 @@ class TestWhatsAppWebhookRoute:
     async def test_same_contact_reuses_active_conversation(self, client: httpx.AsyncClient) -> None:
         _subscribe_ingest()
 
-        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(msg_id="wamid.1"))
+        await client.post("/webhooks/whatsapp/wa", content=wa_payload(msg_id="wamid.1"))
         await _drain_bus()
-        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(msg_id="wamid.2", text="second"))
+        await client.post("/webhooks/whatsapp/wa", content=wa_payload(msg_id="wamid.2", text="second"))
         await _drain_bus()
 
         session = get_session()
@@ -1496,9 +1455,9 @@ class TestWhatsAppWebhookRoute:
     async def test_different_senders_create_different_contacts(self, client: httpx.AsyncClient) -> None:
         _subscribe_ingest()
 
-        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(from_number="5511111111111", msg_id="wamid.a"))
+        await client.post("/webhooks/whatsapp/wa", content=wa_payload(from_number="5511111111111", msg_id="wamid.a"))
         await _drain_bus()
-        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(from_number="5522222222222", msg_id="wamid.b"))
+        await client.post("/webhooks/whatsapp/wa", content=wa_payload(from_number="5522222222222", msg_id="wamid.b"))
         await _drain_bus()
 
         session = get_session()

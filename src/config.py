@@ -55,6 +55,12 @@ class AppConfig:
     server: ServerConfig
     database_url: str
 
+    def find_inbox(self, inbox_id: str) -> InboxConfig | None:
+        for ib in self.inboxes:
+            if ib.id == inbox_id:
+                return ib
+        return None
+
 
 def load_config(path: str | Path = "config.yaml") -> AppConfig:
     raw = yaml.safe_load(Path(path).read_text())

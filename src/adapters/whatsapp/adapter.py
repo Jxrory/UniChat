@@ -1,5 +1,8 @@
+import hashlib
+import hmac
 import json
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -9,6 +12,7 @@ from src.adapters.base import ChannelAdapter, SendResult, WebhookEvent
 logger = logging.getLogger("unichat.whatsapp_adapter")
 
 WHATSAPP_MAX_LENGTH = 4096
+WHATSAPP_API_VERSION = "v20.0"
 
 
 class WhatsAppAdapter(ChannelAdapter):
@@ -21,7 +25,19 @@ class WhatsAppAdapter(ChannelAdapter):
             )
             logger.debug("Webhook verify GET: inbox=%s result=%s", self.inbox_id, result)
             return result
-        logger.debug("Webhook verify POST: inbox=%s returning True", self.inbox_id)
+
+        secret: str | None = self.config.get("webhook_secret")
+        if secret:
+            signature = headers.get("x-hub-signature-256") or headers.get("X-Hub-Signature-256")
+            if signature:
+                expected_sig = "sha256=" + hmac.new(
+                    secret.encode("utf-8"), body, hashlib.sha256
+                ).hexdigest()
+                result = hmac.compare_digest(expected_sig, signature)
+                logger.debug("Webhook verify POST: inbox=%s result=%s", self.inbox_id, result)
+                return result
+
+        logger.debug("Webhook verify POST: inbox=%s no signature, accepting", self.inbox_id)
         return True
 
     def parse_webhook(self, headers: dict[str, str], body: bytes) -> WebhookEvent | None:
@@ -33,10 +49,8 @@ class WhatsAppAdapter(ChannelAdapter):
             logger.warning("Failed to parse webhook body as JSON: inbox=%s", self.inbox_id)
             return None
 
-        try:
-            value = data["entry"][0]["changes"][0]["value"]
-        except (KeyError, IndexError):
-            logger.debug("Webhook skipped (unexpected structure): inbox=%s", self.inbox_id)
+        value = self._extract_message_value(data)
+        if value is None:
             return None
 
         if "statuses" in value:
@@ -57,8 +71,6 @@ class WhatsAppAdapter(ChannelAdapter):
         text = msg["text"]["body"]
         wa_msg_id = msg["id"]
 
-        data["update_id"] = wa_msg_id
-
         logger.debug("Webhook parsed: inbox=%s from=%s text=%s", self.inbox_id, from_number, text)
         return WebhookEvent(
             inbox_id=self.inbox_id,
@@ -66,13 +78,31 @@ class WhatsAppAdapter(ChannelAdapter):
             sender_source_id=from_number,
             content=text,
             content_type="text",
-            raw=data,
+            raw={"update_id": wa_msg_id, **data},
         )
+
+    @staticmethod
+    def _extract_message_value(data: dict[str, Any]) -> dict[str, Any] | None:
+        try:
+            return data["entry"][0]["changes"][0]["value"]
+        except (KeyError, IndexError):
+            logger.debug("Webhook skipped (unexpected structure)")
+            return None
+
+    @staticmethod
+    def _format_content(content: str) -> str:
+        result = content
+
+        result = re.sub(r"(?<!\*)```(?!\*)(.*?)```(?!\*)", r"```\1```", result, flags=re.DOTALL)
+
+        result = re.sub(r"(?<!\*)\*\*(.+?)\*\*(?!\*)", r"*\1*", result)
+
+        return result
 
     @staticmethod
     def _chunk_text(text: str, max_len: int = WHATSAPP_MAX_LENGTH) -> list[str]:
         if not text:
-            return [""]
+            return []
         return [text[i:i + max_len] for i in range(0, len(text), max_len)]
 
     async def _send_single(self, target: str, text: str) -> SendResult:
@@ -86,7 +116,7 @@ class WhatsAppAdapter(ChannelAdapter):
             logger.error("token not configured for inbox=%s", self.inbox_id)
             return SendResult(ok=False, error="token not configured")
 
-        url = f"https://graph.facebook.com/v20.0/{phone_number_id}/messages"
+        url = f"https://graph.facebook.com/{WHATSAPP_API_VERSION}/{phone_number_id}/messages"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -120,7 +150,11 @@ class WhatsAppAdapter(ChannelAdapter):
                 return SendResult(ok=False, error=str(e))
 
     async def send_message(self, target: str, content: str) -> SendResult:
-        chunks = self._chunk_text(content)
+        formatted = self._format_content(content)
+        chunks = self._chunk_text(formatted)
+        if not chunks:
+            return SendResult(ok=True, platform_message_id=None)
+
         if len(chunks) == 1:
             return await self._send_single(target, chunks[0])
 

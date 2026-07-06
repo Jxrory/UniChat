@@ -1,11 +1,13 @@
+import hashlib
+import hmac
 import json
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
 from src.adapters.whatsapp.adapter import WhatsAppAdapter
+from tests.wa_helpers import wa_payload, wa_status_payload
 
 
 @pytest.fixture
@@ -14,45 +16,6 @@ def adapter() -> WhatsAppAdapter:
         inbox_id="wa-test",
         config={"webhook_secret": "test-wa-secret"},
     )
-
-
-def _wa_payload(from_number: str = "5511999999999", text: str = "Hello", msg_type: str = "text") -> bytes:
-    msg: dict[str, Any] = {"from": from_number, "id": "wamid.ABC123", "timestamp": "1700000000", "type": msg_type}
-    if msg_type == "text":
-        msg["text"] = {"body": text}
-
-    return json.dumps({
-        "object": "whatsapp_business_account",
-        "entry": [{
-            "id": "123456789",
-            "changes": [{
-                "value": {
-                    "messaging_product": "whatsapp",
-                    "metadata": {"display_phone_number": "16505551111", "phone_number_id": "123456789"},
-                    "contacts": [{"profile": {"name": "Test User"}, "wa_id": from_number}],
-                    "messages": [msg],
-                },
-                "field": "messages",
-            }],
-        }],
-    }).encode()
-
-
-def _wa_status_payload() -> bytes:
-    return json.dumps({
-        "object": "whatsapp_business_account",
-        "entry": [{
-            "id": "123456789",
-            "changes": [{
-                "value": {
-                    "messaging_product": "whatsapp",
-                    "metadata": {"display_phone_number": "16505551111", "phone_number_id": "123456789"},
-                    "statuses": [{"id": "wamid.status123", "status": "sent", "timestamp": "1700000001", "recipient_id": "5511999999999"}],
-                },
-                "field": "messages",
-            }],
-        }],
-    }).encode()
 
 
 class TestVerifyWebhook:
@@ -72,38 +35,51 @@ class TestVerifyWebhook:
         params = {"hub.mode": "unsubscribe", "hub.verify_token": "test-wa-secret", "hub.challenge": "12345"}
         assert adapter.verify_webhook(params, {}, b"") is False
 
-    def test_post_returns_true(self, adapter: WhatsAppAdapter) -> None:
+    def test_post_without_signature_returns_true(self, adapter: WhatsAppAdapter) -> None:
         assert adapter.verify_webhook({}, {"content-type": "application/json"}, b"{}") is True
+
+    def test_post_with_valid_signature(self, adapter: WhatsAppAdapter) -> None:
+        body = b'{"test": "data"}'
+        expected_sig = "sha256=" + hmac.new(
+            b"test-wa-secret", body, hashlib.sha256
+        ).hexdigest()
+        headers = {"x-hub-signature-256": expected_sig}
+        assert adapter.verify_webhook({}, headers, body) is True
+
+    def test_post_with_invalid_signature(self, adapter: WhatsAppAdapter) -> None:
+        body = b'{"test": "data"}'
+        headers = {"x-hub-signature-256": "sha256:invalidsignature"}
+        assert adapter.verify_webhook({}, headers, body) is False
 
 
 class TestParseWebhook:
     def test_valid_text_message(self, adapter: WhatsAppAdapter) -> None:
-        event = adapter.parse_webhook({}, _wa_payload())
+        event = adapter.parse_webhook({}, wa_payload())
         assert event is not None
         assert event.inbox_id == "wa-test"
         assert event.source_id == "5511999999999"
         assert event.sender_source_id == "5511999999999"
         assert event.content == "Hello"
         assert event.content_type == "text"
-        assert event.raw["update_id"] == "wamid.ABC123"
+        assert event.raw.get("update_id") == "wamid.ABC123"
 
     def test_different_from_number(self, adapter: WhatsAppAdapter) -> None:
-        event = adapter.parse_webhook({}, _wa_payload(from_number="5511888888888"))
+        event = adapter.parse_webhook({}, wa_payload(from_number="5511888888888"))
         assert event is not None
         assert event.source_id == "5511888888888"
         assert event.sender_source_id == "5511888888888"
 
     def test_different_text(self, adapter: WhatsAppAdapter) -> None:
-        event = adapter.parse_webhook({}, _wa_payload(text="How are you?"))
+        event = adapter.parse_webhook({}, wa_payload(text="How are you?"))
         assert event is not None
         assert event.content == "How are you?"
 
     def test_status_update_returns_none(self, adapter: WhatsAppAdapter) -> None:
-        event = adapter.parse_webhook({}, _wa_status_payload())
+        event = adapter.parse_webhook({}, wa_status_payload())
         assert event is None
 
     def test_non_text_message_type_returns_none(self, adapter: WhatsAppAdapter) -> None:
-        event = adapter.parse_webhook({}, _wa_payload(msg_type="image"))
+        event = adapter.parse_webhook({}, wa_payload(msg_type="image"))
         assert event is None
 
     def test_image_message_no_text_field(self, adapter: WhatsAppAdapter) -> None:
@@ -179,6 +155,24 @@ def send_adapter() -> WhatsAppAdapter:
             "webhook_secret": "test-wa-secret",
         },
     )
+
+
+class TestFormatContent:
+    def test_bold_converted(self) -> None:
+        result = WhatsAppAdapter._format_content("Hello **world**")
+        assert result == "Hello *world*"
+
+    def test_plain_text_unchanged(self) -> None:
+        result = WhatsAppAdapter._format_content("Hello world")
+        assert result == "Hello world"
+
+    def test_code_fence_preserved(self) -> None:
+        result = WhatsAppAdapter._format_content("```code block```")
+        assert "```" in result
+
+    def test_empty_string(self) -> None:
+        result = WhatsAppAdapter._format_content("")
+        assert result == ""
 
 
 class TestSendMessage:

@@ -14,13 +14,7 @@ router = APIRouter()
 @router.post("/webhooks/telegram/{inbox_id}")
 async def telegram_webhook(inbox_id: str, request: Request) -> Response:
     config: AppConfig = request.app.state.config
-
-    inbox = None
-    for ib in config.inboxes:
-        if ib.id == inbox_id:
-            inbox = ib
-            break
-
+    inbox = config.find_inbox(inbox_id)
     if inbox is None:
         logger.warning("Webhook received for unknown inbox: %s", inbox_id)
         return JSONResponse(status_code=404, content={"error": "inbox not found"})
@@ -53,13 +47,7 @@ async def telegram_webhook(inbox_id: str, request: Request) -> Response:
 @router.get("/webhooks/whatsapp/{inbox_id}")
 async def whatsapp_webhook_verify(inbox_id: str, request: Request) -> Response:
     config: AppConfig = request.app.state.config
-
-    inbox = None
-    for ib in config.inboxes:
-        if ib.id == inbox_id:
-            inbox = ib
-            break
-
+    inbox = config.find_inbox(inbox_id)
     if inbox is None:
         logger.warning("WhatsApp webhook verify for unknown inbox: %s", inbox_id)
         return PlainTextResponse(status_code=404, content="inbox not found")
@@ -79,13 +67,7 @@ async def whatsapp_webhook_verify(inbox_id: str, request: Request) -> Response:
 @router.post("/webhooks/whatsapp/{inbox_id}")
 async def whatsapp_webhook(inbox_id: str, request: Request) -> Response:
     config: AppConfig = request.app.state.config
-
-    inbox = None
-    for ib in config.inboxes:
-        if ib.id == inbox_id:
-            inbox = ib
-            break
-
+    inbox = config.find_inbox(inbox_id)
     if inbox is None:
         logger.warning("WhatsApp webhook for unknown inbox: %s", inbox_id)
         return JSONResponse(status_code=404, content={"error": "inbox not found"})
