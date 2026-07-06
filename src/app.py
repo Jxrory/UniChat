@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from src.adapters.telegram import register as register_telegram
+from src.adapters.whatsapp import register as register_whatsapp
 from src.bus import init_buses, get_webhook_incoming_bus, get_incoming_bus, get_out_coming_bus
 from src.config import AppConfig, load_config
 from src.db import create_all, dispose_engine, init_db
@@ -21,6 +22,7 @@ from src.services.sender import ChannelSender
 logger = logging.getLogger("unichat.app")
 
 register_telegram()
+register_whatsapp()
 
 
 def create_app(config: AppConfig | None = None) -> FastAPI:

@@ -34,7 +34,15 @@ _TEST_INBOXES = [
             "agentbot_token": "test-agentbot-token",
             "allowed_senders": ["*"],
         },
-    )
+    ),
+    InboxConfig(
+        id="wa",
+        name="WhatsApp Test",
+        channel_type="whatsapp",
+        config={
+            "webhook_secret": "test-wa-secret",
+        },
+    ),
 ]
 _TEST_SERVER = ServerConfig(host="0.0.0.0", port=8000, admin_token="test-admin-token")
 _TEST_CONFIG = AppConfig(inboxes=_TEST_INBOXES, server=_TEST_SERVER, database_url="sqlite://")
@@ -118,9 +126,11 @@ def _subscribe_sender(config: AppConfig | None = None) -> None:
 @pytest.fixture
 def app() -> FastAPI:
     from src.adapters.telegram import register as register_telegram
+    from src.adapters.whatsapp import register as register_whatsapp
     from src.routes.webhook import router as webhook_router
 
     register_telegram()
+    register_whatsapp()
 
     app = FastAPI()
     app.state.config = _TEST_CONFIG
@@ -756,10 +766,12 @@ class TestAgentBotNotifier:
 @pytest.fixture
 def app_with_reply() -> FastAPI:
     from src.adapters.telegram import register as register_telegram
+    from src.adapters.whatsapp import register as register_whatsapp
     from src.routes.webhook import router as webhook_router
     from src.routes.reply import router as reply_router
 
     register_telegram()
+    register_whatsapp()
 
     app = FastAPI()
     app.state.config = _TEST_CONFIG
@@ -1159,6 +1171,212 @@ class TestChannelSender:
             await out_bus._dispatch(ev)
 
             send_mock.assert_not_called()
+
+
+def _wa_payload(
+    from_number: str = "5511999999999",
+    text: str = "Hello",
+    msg_type: str = "text",
+    msg_id: str = "wamid.ABC123",
+) -> bytes:
+    msg: dict[str, Any] = {"from": from_number, "id": msg_id, "timestamp": "1700000000", "type": msg_type}
+    if msg_type == "text":
+        msg["text"] = {"body": text}
+
+    return json.dumps({
+        "object": "whatsapp_business_account",
+        "entry": [{
+            "id": "123456789",
+            "changes": [{
+                "value": {
+                    "messaging_product": "whatsapp",
+                    "metadata": {"display_phone_number": "16505551111", "phone_number_id": "123456789"},
+                    "contacts": [{"profile": {"name": "Test User"}, "wa_id": from_number}],
+                    "messages": [msg],
+                },
+                "field": "messages",
+            }],
+        }],
+    }).encode()
+
+
+def _wa_status_payload() -> bytes:
+    return json.dumps({
+        "object": "whatsapp_business_account",
+        "entry": [{
+            "id": "123456789",
+            "changes": [{
+                "value": {
+                    "messaging_product": "whatsapp",
+                    "metadata": {"display_phone_number": "16505551111", "phone_number_id": "123456789"},
+                    "statuses": [{"id": "wamid.status123", "status": "sent", "timestamp": "1700000001", "recipient_id": "5511999999999"}],
+                },
+                "field": "messages",
+            }],
+        }],
+    }).encode()
+
+
+class TestWhatsAppWebhookRoute:
+    async def test_get_challenge_with_correct_token(self, client: httpx.AsyncClient) -> None:
+        resp = await client.get(
+            "/webhooks/whatsapp/wa",
+            params={"hub.mode": "subscribe", "hub.verify_token": "test-wa-secret", "hub.challenge": "challenge-123"},
+        )
+        assert resp.status_code == 200
+        assert resp.text == "challenge-123"
+
+    async def test_get_challenge_with_wrong_token(self, client: httpx.AsyncClient) -> None:
+        resp = await client.get(
+            "/webhooks/whatsapp/wa",
+            params={"hub.mode": "subscribe", "hub.verify_token": "wrong", "hub.challenge": "challenge-123"},
+        )
+        assert resp.status_code == 401
+
+    async def test_post_valid_text_message_creates_records(self, client: httpx.AsyncClient) -> None:
+        _subscribe_ingest()
+
+        resp = await client.post(
+            "/webhooks/whatsapp/wa",
+            content=_wa_payload(),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            contacts = session.query(Contact).all()
+            assert len(contacts) == 1
+            assert contacts[0].source_id == "5511999999999"
+
+            cis = session.query(ContactInbox).all()
+            assert len(cis) == 1
+            assert cis[0].inbox_id == "wa"
+            assert cis[0].source_id == "5511999999999"
+            assert cis[0].contact_id == contacts[0].id
+
+            conversations = session.query(Conversation).all()
+            assert len(conversations) == 1
+            assert conversations[0].contact_id == contacts[0].id
+            assert conversations[0].status == "active"
+
+            messages = session.query(Message).all()
+            assert len(messages) == 1
+            assert messages[0].conversation_id == conversations[0].id
+            assert messages[0].sender_type == "contact"
+            assert messages[0].message_type == "incoming"
+            assert messages[0].content == "Hello"
+            assert messages[0].source_id == "wamid.ABC123"
+        finally:
+            session.close()
+
+    async def test_post_status_update_returns_200_no_records(self, client: httpx.AsyncClient) -> None:
+        _subscribe_ingest()
+
+        resp = await client.post(
+            "/webhooks/whatsapp/wa",
+            content=_wa_status_payload(),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data.get("skipped") is True
+
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            assert session.query(Message).count() == 0
+        finally:
+            session.close()
+
+    async def test_post_non_text_message_returns_200_no_records(self, client: httpx.AsyncClient) -> None:
+        _subscribe_ingest()
+
+        resp = await client.post(
+            "/webhooks/whatsapp/wa",
+            content=_wa_payload(msg_type="image"),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data.get("skipped") is True
+
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            assert session.query(Message).count() == 0
+        finally:
+            session.close()
+
+    async def test_post_unknown_inbox_returns_404(self, client: httpx.AsyncClient) -> None:
+        resp = await client.post(
+            "/webhooks/whatsapp/unknown",
+            content=_wa_payload(),
+        )
+        assert resp.status_code == 404
+
+    async def test_duplicate_message_id_creates_only_one_message(self, client: httpx.AsyncClient) -> None:
+        _subscribe_ingest()
+
+        payload = _wa_payload(msg_id="wamid.dup-1")
+
+        resp1 = await client.post("/webhooks/whatsapp/wa", content=payload)
+        assert resp1.status_code == 200
+        await _drain_bus()
+
+        resp2 = await client.post("/webhooks/whatsapp/wa", content=payload)
+        assert resp2.status_code == 200
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            messages = session.query(Message).all()
+            assert len(messages) == 1
+        finally:
+            session.close()
+
+    async def test_same_contact_reuses_active_conversation(self, client: httpx.AsyncClient) -> None:
+        _subscribe_ingest()
+
+        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(msg_id="wamid.1"))
+        await _drain_bus()
+        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(msg_id="wamid.2", text="second"))
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            contacts = session.query(Contact).all()
+            assert len(contacts) == 1
+
+            conversations = session.query(Conversation).all()
+            assert len(conversations) == 1
+
+            messages = session.query(Message).all()
+            assert len(messages) == 2
+            for msg in messages:
+                assert msg.conversation_id == conversations[0].id
+        finally:
+            session.close()
+
+    async def test_different_senders_create_different_contacts(self, client: httpx.AsyncClient) -> None:
+        _subscribe_ingest()
+
+        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(from_number="5511111111111", msg_id="wamid.a"))
+        await _drain_bus()
+        await client.post("/webhooks/whatsapp/wa", content=_wa_payload(from_number="5522222222222", msg_id="wamid.b"))
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            contacts = session.query(Contact).all()
+            assert len(contacts) == 2
+            conversations = session.query(Conversation).all()
+            assert len(conversations) == 2
+        finally:
+            session.close()
 
 
 class TestEchoPrevention:
