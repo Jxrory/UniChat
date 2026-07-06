@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -13,10 +14,10 @@ class Base(DeclarativeBase):
     pass
 
 
-def init_db(database_url: str) -> None:
+def init_db(database_url: str, **engine_kwargs: Any) -> None:
     global _engine, _SessionLocal
     logger.info("Initializing database: %s", database_url)
-    _engine = create_engine(database_url, echo=False)
+    _engine = create_engine(database_url, echo=False, **engine_kwargs)
     _SessionLocal = sessionmaker(bind=_engine)
     logger.debug("Database engine created")
 

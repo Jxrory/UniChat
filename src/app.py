@@ -16,9 +16,12 @@ from src.routes.admin import router as admin_router
 from src.routes.health import router as health_router
 from src.routes.webhook import router as webhook_router
 from src.routes.reply import router as reply_router
+from src.routes.ws import router as ws_router
+from src.routes.ws import setup_ws_router
 from src.services.ingest import IngestService
 from src.services.notifier import AgentBotNotifier
 from src.services.sender import ChannelSender
+from src.services.ws_notifier import WSNotifier
 
 logger = logging.getLogger("unichat.app")
 
@@ -48,6 +51,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         sender = ChannelSender(config)
         await sender.start()
 
+        ws_notifier = WSNotifier()
+        await ws_notifier.start()
+        app.state.ws_notifier = ws_notifier
+
+        setup_ws_router(ws_notifier, config.server.admin_token)
+
         webhook_bus = get_webhook_incoming_bus()
         incoming_bus = get_incoming_bus()
         out_coming_bus = get_out_coming_bus()
@@ -67,6 +76,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         except Exception:
             pass
 
+        await ws_notifier.stop()
         dispose_engine()
 
     app = FastAPI(lifespan=lifespan)
@@ -78,5 +88,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.include_router(webhook_router)
     app.include_router(reply_router)
     app.include_router(admin_router)
+    app.include_router(ws_router)
 
     return app
