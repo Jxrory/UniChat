@@ -60,6 +60,7 @@ Bot-only 排除 Chatwoot 全套 SLA/waiting_since/私密笔记/@提及/邮件通
 ## 部署
 
 裸 venv + systemd + 已有 nginx + 证书。
+**部署用户 sudo 受限**: deploy 账号只允许执行 `deploy/sudoers.unichat` 列出的命令。
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Custom (bare metal VPS + systemd + nginx)

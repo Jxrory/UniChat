@@ -1,0 +1,19 @@
+# UniChat deploy sudoers 配置
+# 放到服务器 /etc/sudoers.d/unichat-deploy （用 visudo -f 安装）
+#
+# 限制 deploy 用户只能执行部署所需的特定命令。
+# 替换 deploy 为你的 SSH 登录用户名。
+
+# 允许执行 git pull 和检出
+deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat pull
+deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat checkout *
+deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat reset *
+
+# 允许同步依赖
+deploy ALL=(unichat) NOPASSWD: /usr/bin/uv sync --frozen
+deploy ALL=(unichat) NOPASSWD: /usr/bin/uv sync
+
+# 允许重启/查看服务
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart unichat
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl status unichat
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl is-active unichat

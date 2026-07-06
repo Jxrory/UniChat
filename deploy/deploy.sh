@@ -41,14 +41,14 @@ deploy_cmds() {
     cat <<'SCRIPT'
 set -euo pipefail
 echo "[remote] Pulling latest code..."
-sudo -u unichat git -C /opt/unichat pull
+sudo -u unichat /usr/bin/git -C /opt/unichat pull
 
 echo "[remote] Syncing dependencies..."
 cd /opt/unichat
-sudo -u unichat uv sync --frozen
+sudo -u unichat /usr/bin/uv sync --frozen
 
 echo "[remote] Restarting service..."
-sudo systemctl restart unichat
+sudo /usr/bin/systemctl restart unichat
 
 echo "[remote] Waiting for service to start..."
 for i in $(seq 1 12); do

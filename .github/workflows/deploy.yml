@@ -34,10 +34,10 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            sudo -u unichat git -C /opt/unichat pull
+            sudo -u unichat /usr/bin/git -C /opt/unichat pull
             cd /opt/unichat
-            sudo -u unichat uv sync --frozen
-            sudo systemctl restart unichat
+            sudo -u unichat /usr/bin/uv sync --frozen
+            sudo /usr/bin/systemctl restart unichat
 
       - name: Health check
         run: |
