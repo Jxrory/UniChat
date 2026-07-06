@@ -95,6 +95,7 @@ async def logout(request: Request):
 
 
 @router.get("/admin")
+@router.get("/admin/")
 async def admin_dashboard(request: Request):
     if not request.session.get("authenticated"):
         return RedirectResponse(url="/admin/login", status_code=302)
