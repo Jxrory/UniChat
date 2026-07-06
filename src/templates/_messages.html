@@ -25,6 +25,7 @@
         </div>
         {% elif msg.sender_type == 'agentbot' %}
         <div class="msg-bubble msg-bubble-agentbot">
+            <span class="msg-bubble-label">🤖 Bot</span>
             {% if msg.handoff %}[转人工] {% endif %}{{ msg.content }}
             <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
         </div>
