@@ -9,8 +9,8 @@ set -euo pipefail
 #   - sudo -u unichat permission on the server
 #
 # Environment variables (set in .env or CI):
-#   DEPLOY_HOST      — Server hostname/IP
-#   DEPLOY_USER      — SSH user
+#   DEPLOY_HOST      — Server hostname/IP or SSH config Host alias
+#   DEPLOY_USER      — SSH user (optional; omit to use SSH config alias)
 #   DEPLOY_PORT      — SSH port (default: 22)
 
 DRY_RUN=false
@@ -19,13 +19,20 @@ if [ "${1:-}" = "--dry-run" ]; then
 fi
 
 DEPLOY_HOST="${DEPLOY_HOST:?DEPLOY_HOST not set}"
-DEPLOY_USER="${DEPLOY_USER:?DEPLOY_USER not set}"
 DEPLOY_PORT="${DEPLOY_PORT:-22}"
 REMOTE_DIR="/opt/unichat"
 HEALTH_URL="https://unichat.makemoney2g.com/health"
 
+if [ -n "${DEPLOY_USER:-}" ]; then
+    SSH_TARGET="$DEPLOY_USER@$DEPLOY_HOST"
+    SSH_CMD="ssh -p $DEPLOY_PORT $SSH_TARGET"
+else
+    SSH_TARGET="$DEPLOY_HOST (SSH config alias)"
+    SSH_CMD="ssh $DEPLOY_HOST"
+fi
+
 echo "=== UniChat Deploy ==="
-echo "Target: $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT"
+echo "Target: $SSH_TARGET"
 echo "Remote dir: $REMOTE_DIR"
 echo "Dry run: $DRY_RUN"
 echo ""
@@ -58,15 +65,15 @@ SCRIPT
 }
 
 if [ "$DRY_RUN" = true ]; then
-    echo "[DRY RUN] Would execute on $DEPLOY_HOST:"
+    echo "[DRY RUN] Would execute on $SSH_TARGET:"
     deploy_cmds
     echo ""
     echo "Dry run complete. Run without --dry-run to deploy."
     exit 0
 fi
 
-echo "Connecting to $DEPLOY_USER@$DEPLOY_HOST ..."
-ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" bash < <(deploy_cmds)
+echo "Connecting to $SSH_TARGET ..."
+eval "$SSH_CMD" bash < <(deploy_cmds)
 
 echo ""
 echo "=== Deploy complete ==="
