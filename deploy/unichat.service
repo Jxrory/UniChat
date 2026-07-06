@@ -8,15 +8,27 @@ Type=simple
 User=unichat
 Group=unichat
 WorkingDirectory=/opt/unichat
-EnvironmentFile=-/opt/unichat/.env
+EnvironmentFile=/opt/unichat/.env
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
-ExecStart=uv run uvicorn src.main:app --host 127.0.0.1 --port 8000
+
+ExecStartPre=/usr/bin/env uv sync --frozen
+ExecStart=/usr/bin/env uv run uvicorn src.main:app --host 127.0.0.1 --port 8000
+
 Restart=on-failure
 RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
 StandardOutput=journal
 StandardError=journal
+
+# Security hardening
 PrivateTmp=true
 NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+CapabilityBoundingSet=
+AmbientCapabilities=
 
 [Install]
 WantedBy=multi-user.target

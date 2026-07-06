@@ -1,0 +1,54 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install Python
+        run: uv python install
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check src/ tests/
+      - name: Test
+        run: uv run pytest tests/ -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            sudo -u unichat git -C /opt/unichat pull
+            cd /opt/unichat
+            sudo -u unichat uv sync --frozen
+            sudo systemctl restart unichat
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            sleep 5
+            STATUS=$(curl -sf https://unichat.makemoney2g.com/health | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Deploy verified: health check passed"
+              exit 0
+            fi
+            echo "Waiting... attempt $i/12 status=$STATUS"
+          done
+          echo "Health check failed after 60s"
+          exit 1

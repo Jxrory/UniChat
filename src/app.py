@@ -13,6 +13,7 @@ from src.config import AppConfig, load_config
 from src.db import create_all, dispose_engine, init_db
 from src.log_setup import setup_logging
 from src.routes.admin import router as admin_router
+from src.routes.health import router as health_router
 from src.routes.webhook import router as webhook_router
 from src.routes.reply import router as reply_router
 from src.services.ingest import IngestService
@@ -73,6 +74,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     app.add_middleware(SessionMiddleware, secret_key=config.server.admin_token)
 
+    app.include_router(health_router)
     app.include_router(webhook_router)
     app.include_router(reply_router)
     app.include_router(admin_router)

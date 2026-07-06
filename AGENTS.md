@@ -17,18 +17,19 @@
 ### 事件流（3 个进程内 asyncio bus）
 
 ```
-Telegram webhook → routes/webhook.py → adapter.verify → adapter.parse → WebhookEvent
-  → WebhookIncoming bus → IngestService（找/建 Contact+Conversation+Message 落库）
+Telegram/WhatsApp webhook → routes/webhook.py → adapter.verify → adapter.parse → WebhookEvent
+  → WebhookIncoming bus → IngestService（找/建 Contact+ContactInbox+Conversation+Message 落库）
     → Incoming bus → AgentBotNotifier（HTTP POST 给 AgentBot 外部服务）
       → AgentBot 调 LLM 后 POST /api/v1/agentbot/reply
         → ReplyReceiver 落库 outgoing message
           → handoff=true → conversation 进 pending_human，不发外部
-          → handoff=false → OutComing bus → ChannelSender → adapter.send_message → TG API
+          → handoff=false → OutComing bus → ChannelSender → adapter.send_message → TG/WA API
 ```
 
-### 3 张 DB 表
+### 4 张 DB 表
 
-- `contacts`（唯一键 `(inbox_id, source_id)` — v1 无跨渠道合并）
+- `contacts`（唯一键 `source_id` — 全局实体）
+- `contact_inboxes`（唯一键 `(inbox_id, source_id)` — 渠道身份映射）
 - `conversations`（status: `active` / `pending_human` / `resolved`）
 - `messages`（`sender_type`: contact / agentbot / user；`handoff` flag；`source_id` 双向去重）
 
@@ -59,6 +60,26 @@ Bot-only 排除 Chatwoot 全套 SLA/waiting_since/私密笔记/@提及/邮件通
 ## 部署
 
 裸 venv + systemd + 已有 nginx + 证书。
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: Custom (bare metal VPS + systemd + nginx)
+- Production URL: https://unichat.makemoney2g.com
+- Deploy workflow: .github/workflows/deploy.yml (push to main → test → SSH deploy → health check)
+- Health check: GET /health → {"status":"healthy"}
+- Merge method: squash
+- Project type: web API
+
+### GitHub Secrets required
+- `DEPLOY_HOST` — server hostname
+- `DEPLOY_USER` — SSH username
+- `DEPLOY_PORT` — SSH port (default 22)
+- `DEPLOY_SSH_KEY` — SSH private key for deploy user
+
+### Custom deploy hooks
+- Pre-merge: uv run ruff check src/ tests/ && uv run pytest tests/ -v
+- Deploy trigger: push to main
+- Deploy status: poll https://unichat.makemoney2g.com/health until status=healthy
+- Post-deploy: curl -sf https://unichat.makemoney2g.com/health
 
 ## Agent skills
 
