@@ -131,8 +131,10 @@ async def admin_dashboard(request: Request):
     finally:
         session.close()
 
+    inboxes = [inbox.id for inbox in request.app.state.config.inboxes]
+
     return templates.TemplateResponse(
-        request, "admin.html", {"authenticated": True, "conversations": conversations}
+        request, "admin.html", {"authenticated": True, "conversations": conversations, "inboxes": inboxes}
     )
 
 

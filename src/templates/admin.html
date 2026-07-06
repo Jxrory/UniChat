@@ -31,3 +31,28 @@
     </div>
 </div>
 {% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    var inboxes = "{{ inboxes|join(',') }}";
+    if (!inboxes) return;
+    var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    var ws = new WebSocket(protocol + "//" + window.location.host + "/ws/notifications?inboxes=" + encodeURIComponent(inboxes));
+
+    ws.onmessage = function(event) {
+        try {
+            var data = JSON.parse(event.data);
+            if (data.event === "message.created") {
+                htmx.ajax("GET", "/admin", {target: "#conv-list", swap: "innerHTML"});
+            }
+        } catch(e) {
+            console.error("WS message error:", e);
+        }
+    };
+
+    ws.onclose = function() {
+        setTimeout(function() { location.reload(); }, 5000);
+    };
+})();
+</script>
+{% endblock %}

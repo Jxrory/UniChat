@@ -21,7 +21,12 @@ async def ws_notifications(websocket: WebSocket) -> None:
     await websocket.accept()
 
     token = websocket.query_params.get("token")
-    if not token or token != _admin_token:
+    session_auth = (
+        websocket.session.get("authenticated", False)
+        if "session" in websocket.scope
+        else False
+    )
+    if not session_auth and (not token or token != _admin_token):
         await websocket.close(code=403)
         return
 
