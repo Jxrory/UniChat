@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1] - 2026-07-08
+
+### Fixed
+
+- 活动消息不再发送到非 web 渠道（Telegram/WhatsApp），仅通过 SSE 推送到 widget 浏览器
+- Dev 模式 echo 路由覆盖所有非 Telegram 渠道（之前仅 test inbox），方便 web channel 联调
+
 ## [0.3.0] - 2026-07-07
 
 ### Added
