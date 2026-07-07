@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport
 
 from src.adapters.base import SendResult, WebhookEvent
+from src.services.reply_receiver import ReplyReceiver
 from src.adapters.registry import registry
 from src.bus import (
     Event,
@@ -1805,3 +1806,134 @@ class TestFullRoundTrip:
                     assert outgoing.source_id == "tg-msg-456"
                 finally:
                     session.close()
+
+
+@pytest.fixture
+def app_with_echo() -> FastAPI:
+    from src.adapters.telegram import register as register_telegram
+    from src.adapters.test import register as register_test
+    from src.adapters.whatsapp import register as register_whatsapp
+    from src.routes.webhook import router as webhook_router
+    from src.routes.reply import router as reply_router
+    from src.routes.echo import router as echo_router
+
+    register_telegram()
+    register_test()
+    register_whatsapp()
+
+    config = AppConfig(
+        inboxes=[
+            InboxConfig(
+                id="test",
+                name="Test Channel",
+                channel_type="test",
+                config={
+                    "webhook_secret": "test-test-secret",
+                    "agentbot_url": "http://127.0.0.1:8000/_dev/echo",
+                    "agentbot_token": "test-admin-token",
+                },
+            ),
+        ],
+        server=_TEST_SERVER,
+        database_url="sqlite://",
+    )
+
+    app = FastAPI()
+    app.state.config = config
+    app.include_router(webhook_router)
+    app.include_router(reply_router)
+    app.include_router(echo_router)
+    return app
+
+
+@pytest.fixture
+async def client_with_echo(app_with_echo: FastAPI) -> AsyncGenerator[httpx.AsyncClient, Any]:
+    transport = ASGITransport(app=app_with_echo)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+
+class TestEchoDevRoute:
+    async def test_echo_round_trip(
+        self, client_with_echo: httpx.AsyncClient
+    ) -> None:
+        _subscribe_ingest()
+        _subscribe_sender()
+
+        from src.services.notifier import AgentBotNotifier
+        notifier = AgentBotNotifier(
+            AppConfig(
+                inboxes=[
+                    InboxConfig(
+                        id="test",
+                        name="Test Channel",
+                        channel_type="test",
+                        config={
+                            "webhook_secret": "test-test-secret",
+                            "agentbot_url": "http://127.0.0.1:8000/_dev/echo",
+                            "agentbot_token": "test-admin-token",
+                        },
+                    ),
+                ],
+                server=_TEST_SERVER,
+                database_url="sqlite://",
+            )
+        )
+        bus = get_incoming_bus()
+        bus.subscribe("Incoming", notifier._handle)
+
+        calls: list[str] = []
+
+        async def mock_post(url: str, **kwargs: Any) -> AsyncMock:
+            calls.append(url)
+            if len(calls) == 1:
+                payload = kwargs.get("json", {})
+                echo_content = f"[echo] {payload.get('content', '')}"
+                receiver = ReplyReceiver()
+                result = await receiver.handle_reply(
+                    conversation_id=payload["conversation_id"],
+                    content=echo_content,
+                    handoff=False,
+                    source_id=None,
+                )
+                resp = _make_httpx_response(
+                    is_success=result.get("ok", False),
+                    status_code=200 if result.get("ok") else 400,
+                )
+                return resp
+
+            return _make_httpx_response(is_success=True, status_code=200)
+
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.post.side_effect = mock_post
+
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+
+            resp = await client_with_echo.post(
+                "/webhooks/test/test",
+                content=_test_payload(text="hello"),
+                headers={"x-webhook-secret": "test-test-secret"},
+            )
+            assert resp.status_code == 200
+            await _drain_all_buses()
+
+            out_bus = get_out_coming_bus()
+            while not out_bus._queue.empty():
+                ev = await out_bus._queue.get()
+                await out_bus._dispatch(ev)
+
+            session = get_session()
+            try:
+                outgoing = (
+                    session.query(Message)
+                    .filter(
+                        Message.sender_type == "agentbot",
+                        Message.message_type == "outgoing",
+                    )
+                    .first()
+                )
+                assert outgoing is not None
+                assert outgoing.content == "[echo] hello"
+            finally:
+                session.close()
