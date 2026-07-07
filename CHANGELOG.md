@@ -4,8 +4,8 @@
 
 ### Added
 
-- WS 推 `message.created` 时同会话 `#message-panel` 自动刷新：`.msg-container` 增加 `data-conv-id` 属性，`onmessage` 在 `message_type === "incoming"` 且 `conversation_id` 匹配时追加 `htmx.ajax` 刷新消息面板
-- E2E 测试：同会话 message-panel 刷新 + 不同会话不打扰分支（2 个新测试方法）
+- 同会话收到新消息时 WebSocket 自动推送 `#message-panel` 局部刷新，无需整页重载（issue #31）：`.msg-container` 增加 `data-conv-id` 属性，`onmessage` 在 `message_type === "incoming"` 且 `conversation_id` 匹配时追加 `htmx.ajax` 刷新消息面板
+- 增加 E2E 测试覆盖 message-panel WebSocket 刷新的两种分支：同会话自动刷新 + 不同会话不打扰（2 个新测试方法）
 
 ### Fixed
 
