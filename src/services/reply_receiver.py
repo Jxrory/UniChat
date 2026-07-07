@@ -17,6 +17,7 @@ class ReplyReceiver:
         handoff: bool = False,
         source_id: str | None = None,
         sender_type: str = "agentbot",
+        handoff_activity_text: str | None = None,
     ) -> dict[str, str | int | bool]:
         session = get_session()
         try:
@@ -59,6 +60,7 @@ class ReplyReceiver:
 
             now = datetime.now(timezone.utc)
             conversation.last_activity_at = now
+            activity_msg = None
             if sender_type == "agentbot" and handoff:
                 if not validate_transition(conversation.status, "pending_human"):
                     logger.warning("Handoff rejected: conversation=%s status=%s", conversation_id, conversation.status)
@@ -69,6 +71,25 @@ class ReplyReceiver:
                 conversation.status = "pending_human"
                 logger.info("Conversation handed off to human: id=%s", conversation_id)
 
+                activity_content = handoff_activity_text or "转人工中，请稍候"
+                activity_msg = Message(
+                    conversation_id=conversation.id,
+                    inbox_id=conversation.inbox_id,
+                    sender_type="system",
+                    sender_id=None,
+                    content=activity_content,
+                    content_type="text",
+                    message_type="activity",
+                    handoff=False,
+                    status="sent",
+                )
+                session.add(activity_msg)
+                session.flush()
+                logger.info(
+                    "Activity message created: msg_id=%s conversation=%s content=%s",
+                    activity_msg.id, conversation_id, activity_content,
+                )
+
             session.commit()
 
             if not handoff:
@@ -77,6 +98,11 @@ class ReplyReceiver:
                 logger.debug("Outgoing message published: msg_id=%s conversation=%s", msg.id, conversation_id)
             else:
                 logger.info("Outgoing message saved (handoff, not sent): msg_id=%s conversation=%s", msg.id, conversation_id)
+
+            if activity_msg is not None:
+                activity_bus = get_out_coming_bus()
+                await activity_bus.publish("OutComing", activity_msg.id)
+                logger.debug("Activity message published to OutComing: msg_id=%s", activity_msg.id)
 
             return {"ok": True, "message_id": msg.id}
         finally:

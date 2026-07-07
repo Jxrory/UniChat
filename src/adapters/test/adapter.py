@@ -64,6 +64,6 @@ class TestAdapter(ChannelAdapter):
             raw=raw,
         )
 
-    async def send_message(self, target: str, content: str) -> SendResult:
+    async def send_message(self, conversation_id: str, target: str, content: str) -> SendResult:
         logger.info("[TestAdapter] Would send to %s: %s", target, content)
         return SendResult(ok=True, platform_message_id=f"test-{uuid4().hex[:8]}")

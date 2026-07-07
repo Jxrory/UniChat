@@ -23,8 +23,8 @@ class ChannelSender:
         session = get_session()
         try:
             msg = session.query(Message).filter(Message.id == message_id).first()
-            if msg is None or msg.handoff:
-                logger.debug("Skipping send: msg=%s handoff=%s", message_id, msg.handoff if msg else "not_found")
+            if msg is None or msg.handoff or msg.message_type == "activity":
+                logger.debug("Skipping send: msg=%s handoff=%s message_type=%s", message_id, msg.handoff if msg else "not_found", msg.message_type if msg else "n/a")
                 return
 
             inbox = next(
@@ -53,7 +53,7 @@ class ChannelSender:
 
             adapter = registry.create(inbox.id, inbox.channel_type, inbox.config)
             logger.debug("Sending message: msg_id=%s target=%s", msg.id, contact.source_id)
-            result = await adapter.send_message(contact.source_id, msg.content)
+            result = await adapter.send_message(msg.conversation_id, contact.source_id, msg.content)
 
             if result.ok and result.platform_message_id:
                 msg.source_id = result.platform_message_id

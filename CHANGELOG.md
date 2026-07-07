@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.1] - 2026-07-08
+
+### Fixed
+
+- 活动消息不再发送到非 web 渠道（Telegram/WhatsApp），仅通过 SSE 推送到 widget 浏览器
+- Dev 模式 echo 路由覆盖所有非 Telegram 渠道（之前仅 test inbox），方便 web channel 联调
+
+## [0.3.0] - 2026-07-07
+
+### Added
+
+- **Web Channel**: 新增第四个渠道类型 `web`，第三方站点可通过 HTML `<script>` 嵌入聊天框，访客无需 IM 账号即可与 AgentBot/人工对话
+- **Widget SDK** (`/static/widget.js`)：自包含 JS SDK，自动初始化、浮动聊天气泡、消息发送、历史拉取、SSE 实时推送
+- **SSE 下行推送**: `GET /widget/conversations/{id}/sse` 进程内 per-conversation 队列推送 AgentBot/人工回复到浏览器
+- **Identify 身份升级**: `POST /widget/{inbox_id}/identify` HMAC-SHA256 鉴权，匿名访客可升级为已识别用户，老 Conversation 自动 resolve
+- **Handoff 活动消息**: AgentBot 转人工时自动创建 `sender_type='system'` 活动消息（默认「转人工中，请稍候」），通过 SSE 推送到 widget
+- **Idle TTL Auto-resolve**: 后台 sweep 每分钟检查 web 渠道无活动会话，按 inbox 配置的 `idle_resolve_hours`（默认 24h）自动 resolve
+- `ChannelAdapter.send_message` 增加 `conversation_id` 形参（WebAdapter 用它路由 SSE 队列，TG/WA 适配器忽略）
+
+### Changed
+
+- AgentBot 通知 payload 增加 `channel_type` 字段
+
 ## [0.2.1] - 2026-07-07
 
 ### Added

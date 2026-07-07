@@ -9,7 +9,7 @@
 _Avoid_: 收件箱、mailbox、source（source 容易和 source_id 混淆）
 
 **Channel**:
-外部渠道的实现类型（v1 只有 Telegram）。Inbox 是配置的壳，Channel 是渠道特定的 adapter 逻辑。v1 单渠道，二者合并为 YAML 配置项。
+外部渠道的实现类型。第一版只有 Telegram；后续引入 web 渠道（访客聊天框）。Inbox 是配置的壳，Channel 是渠道特定的 adapter 逻辑。v1 单渠道时 Inbox 与 Channel 合并为单条 YAML 配置项；web 渠道到来后 Channel 由单一类型扩展为注册表里多个 adapter。
 _Avoid_: 平台、platform（platform 在本文里指外部 IM 平台）
 
 **Contact**:
@@ -17,7 +17,7 @@ _Avoid_: 平台、platform（platform 在本文里指外部 IM 平台）
 _Avoid_: 客户、customer、user（user 在本文指人工客服）
 
 **Contact.source_id**:
-外部平台侧的稳定用户标识（Telegram chat_id、WhatsApp 手机号等）。与 Inbox 一起唯一确定一个 Contact。
+外部平台侧的稳定用户标识。语义随渠道而变：Telegram = chat_id；web 渠道 = widget 在浏览器 localStorage 生成的 UUID（匿名访客），或 partner 后端经 HMAC 签名注入的 user_id（已识别访客）。后者覆盖前者，且 identify 切换会结束老 conversation 另起一条新 conversation。与 Inbox 一起唯一确定一个 Contact。
 _Avoid_: external_id、platform_id
 
 **Message.source_id**:
@@ -28,7 +28,7 @@ _Avoid_: external_id、platform_id（注意与 Contact.source_id 是不同层级
 消息的容器，关联一个 Inbox、一个 Contact。会话状态机：
 
 - `active` — AgentBot 正常回复
-- `pending_human` — AgentBot 发出 handoff 信号后等待人工接入；Contact 在此期间发新消息则回到 active
+- `pending_human` — AgentBot 发出 handoff 信号后等待人工接入；Contact 在此期间发新消息仍落库但**不通知 AgentBot**（仅等待人工），不打回 active
 - `resolved` — 人工客服标记结束，不再接受新消息
 
 同一 Contact 在同一 Inbox 下按「取最近未 resolved 会话，没有则新建」归属消息。

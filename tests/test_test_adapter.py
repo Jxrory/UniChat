@@ -107,13 +107,13 @@ class TestTestAdapter:
 
     async def test_send_message_returns_ok(self) -> None:
         adapter = TestAdapter(inbox_id="test", config={})
-        result = await adapter.send_message("user-1", "hello")
+        result = await adapter.send_message("conv-1", "user-1", "hello")
         assert isinstance(result, SendResult)
         assert result.ok is True
 
     async def test_send_message_platform_id_starts_with_test(self) -> None:
         adapter = TestAdapter(inbox_id="test", config={})
-        result = await adapter.send_message("user-1", "hello")
+        result = await adapter.send_message("conv-1", "user-1", "hello")
         assert result.platform_message_id is not None
         assert result.platform_message_id.startswith("test-")
         assert len(result.platform_message_id) == 13  # "test-" + 8 hex chars
@@ -123,7 +123,7 @@ class TestTestAdapter:
 
         caplog.set_level(logging.INFO)
         adapter = TestAdapter(inbox_id="test", config={})
-        result = await adapter.send_message("test-user-1", "hello world")
+        result = await adapter.send_message("conv-1", "test-user-1", "hello world")
         assert result.ok is True
         assert result.platform_message_id is not None
         assert result.platform_message_id.startswith("test-")
