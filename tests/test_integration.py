@@ -48,6 +48,16 @@ _TEST_INBOXES = [
             "agentbot_token": "test-agentbot-token",
         },
     ),
+    InboxConfig(
+        id="test",
+        name="Test Channel",
+        channel_type="test",
+        config={
+            "webhook_secret": "test-test-secret",
+            "agentbot_url": "http://localhost:9999",
+            "agentbot_token": "test-agentbot-token",
+        },
+    ),
 ]
 _TEST_SERVER = ServerConfig(host="0.0.0.0", port=8000, admin_token="test-admin-token")
 _TEST_CONFIG = AppConfig(inboxes=_TEST_INBOXES, server=_TEST_SERVER, database_url="sqlite://")
@@ -131,10 +141,12 @@ def _subscribe_sender(config: AppConfig | None = None) -> None:
 @pytest.fixture
 def app() -> FastAPI:
     from src.adapters.telegram import register as register_telegram
+    from src.adapters.test import register as register_test
     from src.adapters.whatsapp import register as register_whatsapp
     from src.routes.webhook import router as webhook_router
 
     register_telegram()
+    register_test()
     register_whatsapp()
 
     app = FastAPI()
@@ -148,6 +160,10 @@ async def client(app: FastAPI) -> AsyncGenerator[httpx.AsyncClient, Any]:
     transport = ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
+
+
+def _test_payload(text: str = "hello", source_id: str = "test-user-1", msg_id: str = "test-msg-1") -> bytes:
+    return json.dumps({"text": text, "source_id": source_id, "sender_source_id": source_id, "msg_id": msg_id}).encode()
 
 
 def _tg_payload(update_id: int = 1, chat_id: int = 12345, user_id: int = 67890, text: str = "hello") -> bytes:
@@ -771,11 +787,13 @@ class TestAgentBotNotifier:
 @pytest.fixture
 def app_with_reply() -> FastAPI:
     from src.adapters.telegram import register as register_telegram
+    from src.adapters.test import register as register_test
     from src.adapters.whatsapp import register as register_whatsapp
     from src.routes.webhook import router as webhook_router
     from src.routes.reply import router as reply_router
 
     register_telegram()
+    register_test()
     register_whatsapp()
 
     app = FastAPI()
@@ -1468,6 +1486,247 @@ class TestWhatsAppWebhookRoute:
             assert len(conversations) == 2
         finally:
             session.close()
+
+
+class TestTestChannel:
+    async def test_valid_payload_creates_contact_conversation_and_message(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        _subscribe_ingest()
+
+        resp = await client.post(
+            "/webhooks/test/test",
+            content=_test_payload(),
+            headers={"x-webhook-secret": "test-test-secret"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            contacts = session.query(Contact).all()
+            assert len(contacts) == 1
+            assert contacts[0].source_id == "test-user-1"
+            cis = session.query(ContactInbox).all()
+            assert len(cis) == 1
+            assert cis[0].inbox_id == "test"
+            assert cis[0].source_id == "test-user-1"
+            assert cis[0].contact_id == contacts[0].id
+
+            conversations = session.query(Conversation).all()
+            assert len(conversations) == 1
+            assert conversations[0].contact_id == contacts[0].id
+            assert conversations[0].status == "active"
+
+            messages = session.query(Message).all()
+            assert len(messages) == 1
+            assert messages[0].conversation_id == conversations[0].id
+            assert messages[0].sender_type == "contact"
+            assert messages[0].message_type == "incoming"
+            assert messages[0].content == "hello"
+            assert messages[0].source_id == "test-msg-1"
+        finally:
+            session.close()
+
+    async def test_duplicate_msg_id_creates_only_one_message(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        _subscribe_ingest()
+
+        payload = _test_payload(msg_id="test-dup-1")
+        headers = {"x-webhook-secret": "test-test-secret"}
+
+        resp1 = await client.post("/webhooks/test/test", content=payload, headers=headers)
+        assert resp1.status_code == 200
+        await _drain_bus()
+
+        resp2 = await client.post("/webhooks/test/test", content=payload, headers=headers)
+        assert resp2.status_code == 200
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            messages = session.query(Message).all()
+            assert len(messages) == 1
+        finally:
+            session.close()
+
+    async def test_wrong_secret_returns_401(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        resp = await client.post(
+            "/webhooks/test/test",
+            content=_test_payload(),
+            headers={"x-webhook-secret": "wrong-secret"},
+        )
+        assert resp.status_code == 401
+
+        session = get_session()
+        try:
+            assert session.query(Message).count() == 0
+        finally:
+            session.close()
+
+    async def test_missing_text_returns_200_and_skipped(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        resp = await client.post(
+            "/webhooks/test/test",
+            content=_test_payload(text=""),
+            headers={"x-webhook-secret": "test-test-secret"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data.get("skipped") is True
+
+    async def test_unknown_inbox_returns_404(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        resp = await client.post(
+            "/webhooks/test/unknown",
+            content=_test_payload(),
+            headers={"x-webhook-secret": "test-test-secret"},
+        )
+        assert resp.status_code == 404
+
+    async def test_same_source_id_reuses_active_conversation(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        _subscribe_ingest()
+
+        headers = {"x-webhook-secret": "test-test-secret"}
+
+        await client.post("/webhooks/test/test", content=_test_payload(msg_id="msg-1"), headers=headers)
+        await _drain_bus()
+        await client.post("/webhooks/test/test", content=_test_payload(msg_id="msg-2", text="second"), headers=headers)
+        await _drain_bus()
+
+        session = get_session()
+        try:
+            contacts = session.query(Contact).all()
+            assert len(contacts) == 1
+
+            conversations = session.query(Conversation).all()
+            assert len(conversations) == 1
+
+            messages = session.query(Message).all()
+            assert len(messages) == 2
+            for msg in messages:
+                assert msg.conversation_id == conversations[0].id
+        finally:
+            session.close()
+
+    async def test_reply_triggers_send_message(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        _subscribe_sender()
+
+        session = get_session()
+        try:
+            contact = Contact(source_id="test-user-1", name="Test")
+            session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="test", source_id="test-user-1")
+            session.add(ci)
+            session.flush()
+
+            conversation = Conversation(
+                inbox_id="test",
+                contact_id=contact.id,
+                status="active",
+            )
+            session.add(conversation)
+            session.flush()
+
+            msg = Message(
+                conversation_id=conversation.id,
+                inbox_id="test",
+                sender_type="agentbot",
+                message_type="outgoing",
+                content="Bot reply",
+                status="pending",
+            )
+            session.add(msg)
+            session.commit()
+            msg_id = msg.id
+        finally:
+            session.close()
+
+        out_bus = get_out_coming_bus()
+        await out_bus.publish("OutComing", msg_id)
+
+        ev = await out_bus._queue.get()
+        await out_bus._dispatch(ev)
+
+        session = get_session()
+        try:
+            updated = session.query(Message).filter(Message.id == msg_id).first()
+            assert updated is not None
+            assert updated.status == "sent"
+            assert updated.source_id is not None
+            assert updated.source_id.startswith("test-")
+        finally:
+            session.close()
+
+    async def test_round_trip(
+        self, client_with_reply: httpx.AsyncClient
+    ) -> None:
+        _subscribe_ingest()
+        _subscribe_notifier()
+        _subscribe_sender()
+
+        httpx_response = _make_httpx_response(is_success=True, status_code=200)
+        httpx_client = _make_httpx_post_mock(response=httpx_response)
+
+        with patch("httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = httpx_client
+
+            resp = await client_with_reply.post(
+                "/webhooks/test/test",
+                content=_test_payload(),
+                headers={"x-webhook-secret": "test-test-secret"},
+            )
+            assert resp.status_code == 200
+            await _drain_all_buses()
+
+            httpx_client.post.assert_called_once()
+
+            session = get_session()
+            try:
+                conv = session.query(Conversation).first()
+                assert conv is not None
+                conv_id = conv.id
+            finally:
+                session.close()
+
+            reply_resp = await client_with_reply.post(
+                "/api/v1/agentbot/reply",
+                json={
+                    "conversation_id": conv_id,
+                    "content": "I am a bot",
+                    "source_id": "bot-reply-1",
+                },
+                headers={"Authorization": "Bearer test-admin-token"},
+            )
+            assert reply_resp.status_code == 200
+            reply_data = reply_resp.json()
+
+            out_bus = get_out_coming_bus()
+            ev = await out_bus._queue.get()
+            await out_bus._dispatch(ev)
+
+            session = get_session()
+            try:
+                outgoing = session.query(Message).filter(Message.id == reply_data["message_id"]).first()
+                assert outgoing is not None
+                assert outgoing.status == "sent"
+                assert outgoing.source_id is not None
+                assert outgoing.source_id.startswith("test-")
+            finally:
+                session.close()
 
 
 class TestEchoPrevention:
