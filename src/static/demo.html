@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniChat Widget Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+    .card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); padding: 48px; max-width: 600px; width: 100%; text-align: center; }
+    h1 { font-size: 28px; color: #111827; margin-bottom: 8px; }
+    p { color: #6b7280; line-height: 1.6; margin-bottom: 24px; }
+    .badge { display: inline-block; background: #e0e7ff; color: #4338ca; font-size: 13px; padding: 4px 12px; border-radius: 99px; margin-bottom: 24px; }
+    .features { text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+    .features li { list-style: none; background: #f9fafb; padding: 12px 16px; border-radius: 8px; font-size: 14px; color: #374151; }
+    .features li::before { content: "✓ "; color: #22c55e; font-weight: bold; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
+    .footer { font-size: 12px; color: #9ca3af; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">UniChat Widget Demo</div>
+    <h1>👋 欢迎来到演示页面</h1>
+    <p>右下角的蓝色气泡就是 UniChat Widget。<br>点击打开，发一条消息试试。</p>
+    <ul class="features">
+      <li>发送文字消息</li>
+      <li>实时 SSE 推送</li>
+      <li>重开拉取历史</li>
+      <li>转人工提示</li>
+      <li>身份识别</li>
+      <li>自动 resolve</li>
+    </ul>
+    <hr>
+    <p style="font-size:14px;color:#9ca3af">
+      发消息后会通过 echo AgentBot 自动回复（开发模式）。<br>
+      试试发包含 <code>handoff</code> 的文字触发转人工。
+    </p>
+  </div>
+  <div class="footer">UniChat v0.3.0 · <a href="https://github.com/Jxrory/UniChat" style="color:#6366f1">GitHub</a></div>
+
+  <!-- Widget SDK -->
+  <script src="/static/widget.js"
+          data-inbox="web"
+          data-embed-key="demo-embed-key-2024"
+          data-base-url="">
+  </script>
+</body>
+</html>

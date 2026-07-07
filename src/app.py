@@ -123,9 +123,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     if config.server.env != "production":
         from src.routes.echo import router as echo_router
         app.include_router(echo_router)
-        test_inbox = config.find_inbox("test")
-        if test_inbox:
-            test_inbox.config["agentbot_url"] = f"http://127.0.0.1:{config.server.port}/_dev/echo"
-            test_inbox.config["agentbot_token"] = config.server.admin_token
+        for inbox in config.inboxes:
+            if inbox.channel_type != "telegram":
+                inbox.config["agentbot_url"] = f"http://127.0.0.1:{config.server.port}/_dev/echo"
+                inbox.config["agentbot_token"] = config.server.admin_token
 
     return app
