@@ -2,10 +2,12 @@
 {% block title %}UniChat — 对话{% endblock %}
 {% block content %}
 <div class="admin-layout">
-    <div class="conv-list" id="conv-list">
+    <div class="conv-list" id="conv-list" data-testid="conv-list">
         {% if conversations %}
             {% for conv in conversations %}
             <div class="conv-row"
+                 data-testid="conv-row"
+                 data-conv-id="{{ conv.id }}"
                  hx-get="/admin/conversations/{{ conv.id }}/messages"
                  hx-target="#message-panel"
                  hx-trigger="click"
@@ -26,7 +28,7 @@
         <div class="empty-state">暂无对话</div>
         {% endif %}
     </div>
-    <div class="msg-panel" id="message-panel">
+    <div class="msg-panel" id="message-panel" data-testid="message-panel">
         <div class="empty-state">选择左侧对话查看消息</div>
     </div>
 </div>

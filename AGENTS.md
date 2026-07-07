@@ -77,7 +77,17 @@ Bot-only 排除 Chatwoot 全套 SLA/waiting_since/私密笔记/@提及/邮件通
 - `DEPLOY_SSH_KEY` — SSH private key for deploy user
 
 ### Custom deploy hooks
-- Pre-merge: uv run ruff check src/ tests/ && uv run pytest tests/ -v
+- Pre-merge: uv run ruff check src/ tests/ && uv run pytest tests/ -v -m "not e2e"
+
+### Testing conventions
+
+- L1 单元/集成用 httpx ASGITransport，放 tests/ 扁平目录，文件名 test_sliceN / test_<module>.py
+- L2 E2E 用 pytest-playwright，放 tests/e2e/，必须标 @pytest.mark.e2e
+- E2E 只补 httpx 测不到的：htmx swap、WebSocket push、真实浏览器行为、console error
+- 不要用 Playwright 重写 test_admin_ui.py 已覆盖的 HTML 字符串断言
+- 模板交互元素必须带 data-testid（见 docs/测试方案.md §7 清单）
+- 跑 E2E：uv run pytest tests/e2e -v -m e2e
+- 跑 L1：uv run pytest tests/ -v -m "not e2e"（部署钩子同此）
 - Deploy trigger: push to main
 - Deploy status: poll https://unichat.makemoney2g.com/health until status=healthy
 - Post-deploy: curl -sf https://unichat.makemoney2g.com/health

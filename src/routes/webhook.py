@@ -44,6 +44,33 @@ async def telegram_webhook(inbox_id: str, request: Request) -> Response:
     return JSONResponse(status_code=200, content={"ok": True})
 
 
+@router.post("/webhooks/test/{inbox_id}")
+async def test_webhook(inbox_id: str, request: Request) -> Response:
+    config: AppConfig = request.app.state.config
+    inbox = config.find_inbox(inbox_id)
+    if inbox is None:
+        logger.warning("Webhook received for unknown inbox: %s", inbox_id)
+        return JSONResponse(status_code=404, content={"error": "inbox not found"})
+
+    adapter = registry.create(inbox.id, inbox.channel_type, inbox.config)
+    headers = dict(request.headers)
+    body = await request.body()
+
+    if not adapter.verify_webhook({}, headers, body):
+        logger.warning("Webhook verification failed: inbox=%s", inbox_id)
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
+
+    event = adapter.parse_webhook(headers, body)
+    if event is None:
+        logger.debug("Webhook skipped: inbox=%s", inbox_id)
+        return JSONResponse(status_code=200, content={"ok": True, "skipped": True})
+
+    logger.info("Test webhook received: inbox=%s source_id=%s content=%s", inbox_id, event.source_id, event.content)
+    bus = get_webhook_incoming_bus()
+    await bus.publish("WebhookIncoming", event)
+    return JSONResponse(status_code=200, content={"ok": True})
+
+
 @router.get("/webhooks/whatsapp/{inbox_id}")
 async def whatsapp_webhook_verify(inbox_id: str, request: Request) -> Response:
     config: AppConfig = request.app.state.config

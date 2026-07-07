@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from src.adapters.telegram import register as register_telegram
+from src.adapters.test import register as register_test
 from src.adapters.whatsapp import register as register_whatsapp
 from src.bus import init_buses, get_webhook_incoming_bus, get_incoming_bus, get_out_coming_bus
 from src.config import AppConfig, load_config
@@ -26,6 +28,8 @@ from src.services.ws_notifier import WSNotifier
 logger = logging.getLogger("unichat.app")
 
 register_telegram()
+if os.environ.get("UNICHAT_ENV") != "production":
+    register_test()
 register_whatsapp()
 
 
