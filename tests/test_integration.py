@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
+import logging
 
 import httpx
 import pytest
@@ -1620,9 +1621,10 @@ class TestTestChannel:
             session.close()
 
     async def test_reply_triggers_send_message(
-        self, client: httpx.AsyncClient
+        self, client: httpx.AsyncClient, caplog: Any
     ) -> None:
         _subscribe_sender()
+        caplog.set_level(logging.INFO)
 
         session = get_session()
         try:
@@ -1670,6 +1672,9 @@ class TestTestChannel:
             assert updated.source_id.startswith("test-")
         finally:
             session.close()
+
+        assert "Would send to test-user-1" in caplog.text
+        assert "Bot reply" in caplog.text
 
     async def test_round_trip(
         self, client_with_reply: httpx.AsyncClient

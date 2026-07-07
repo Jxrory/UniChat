@@ -9,6 +9,7 @@ logger = logging.getLogger("unichat.test_adapter")
 
 
 class TestAdapter(ChannelAdapter):
+    __test__ = False  # pytest: not a test class
     def verify_webhook(self, params: dict[str, str], headers: dict[str, str], body: bytes) -> bool:
         expected: str | None = self.config.get("webhook_secret")
         if not expected:
@@ -40,7 +41,12 @@ class TestAdapter(ChannelAdapter):
 
         source_id = str(data.get("source_id", "test-user"))
         sender_source_id = str(data.get("sender_source_id", "test-user"))
-        update_id = data.get("update_id") or data.get("msg_id") or uuid4().hex
+        if "update_id" in data:
+            update_id = str(data["update_id"])
+        elif "msg_id" in data:
+            update_id = str(data["msg_id"])
+        else:
+            update_id = uuid4().hex
 
         raw: dict[str, Any] = {"update_id": update_id}
         raw.update(data)
