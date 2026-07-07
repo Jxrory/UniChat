@@ -92,7 +92,14 @@
     '@media (max-width:480px) {',
     '  #unichat-widget .uw-panel {',
     '    position: fixed; top: 0; left: 0;',
-    '    width: 100%; height: 100%; border-radius: 0;',
+    '    width: 100%; height: 100vh; border-radius: 0;',
+    '  }',
+    '  @supports (height: 100dvh) {',
+    '    #unichat-widget .uw-panel { height: 100dvh; }',
+    '  }',
+    '  #unichat-widget .uw-panel.uw-vv-active {',
+    '    top: var(--uw-vv-top, 0px);',
+    '    height: var(--uw-vv-height, 100vh);',
     '  }',
     '}',
     '#unichat-widget .uw-header {',
@@ -148,6 +155,9 @@
     '#unichat-widget .uw-empty {',
     '  text-align: center; color: #9CA3AF; font-size: 14px; padding: 40px 16px;',
     '}',
+    '@media (max-width:480px) {',
+    '  #unichat-widget .uw-input { font-size: 16px; }',
+    '}',
   ].join('\n')
 
   function Widget(options) {
@@ -169,6 +179,7 @@
     injectStyles(styles)
     this._buildDOM()
     this._bindEvents()
+    this._setupVisualViewport()
 
     if (this.conversationId) {
       this._loadHistory().then(function () {
@@ -260,6 +271,20 @@
     this._sendBtn.addEventListener('click', function () {
       self._doSend()
     })
+  }
+
+  Widget.prototype._setupVisualViewport = function () {
+    var vv = window.visualViewport
+    if (!vv) return
+    var self = this
+    this._panel.classList.add('uw-vv-active')
+    this._onVVResize = function () {
+      self._panel.style.setProperty('--uw-vv-height', vv.height + 'px')
+      self._panel.style.setProperty('--uw-vv-top', vv.offsetTop + 'px')
+    }
+    vv.addEventListener('resize', this._onVVResize)
+    vv.addEventListener('scroll', this._onVVResize)
+    this._onVVResize()
   }
 
   Widget.prototype._doSend = function () {
@@ -482,6 +507,10 @@
     if (this._destroyed) return
     this._destroyed = true
     this._unsubscribeSSE()
+    if (this._onVVResize && window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this._onVVResize)
+      window.visualViewport.removeEventListener('scroll', this._onVVResize)
+    }
     var el = document.getElementById('unichat-widget')
     if (el && el.parentNode) el.parentNode.removeChild(el)
     var idx = instances.indexOf(this)
