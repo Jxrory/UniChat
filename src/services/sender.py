@@ -23,8 +23,8 @@ class ChannelSender:
         session = get_session()
         try:
             msg = session.query(Message).filter(Message.id == message_id).first()
-            if msg is None or msg.handoff:
-                logger.debug("Skipping send: msg=%s handoff=%s", message_id, msg.handoff if msg else "not_found")
+            if msg is None or msg.handoff or msg.message_type == "activity":
+                logger.debug("Skipping send: msg=%s handoff=%s message_type=%s", message_id, msg.handoff if msg else "not_found", msg.message_type if msg else "n/a")
                 return
 
             inbox = next(
