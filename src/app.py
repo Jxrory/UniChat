@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -27,7 +28,8 @@ from src.services.ws_notifier import WSNotifier
 logger = logging.getLogger("unichat.app")
 
 register_telegram()
-register_test()
+if os.environ.get("UNICHAT_ENV") != "production":
+    register_test()
 register_whatsapp()
 
 

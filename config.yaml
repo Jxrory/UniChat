@@ -14,7 +14,7 @@ inboxes:
     name: "测试渠道"
     channel_type: test
     config:
-      webhook_secret: "test-secret"
+      webhook_secret: "${TEST_WEBHOOK_SECRET}"
 
 server:
   host: "0.0.0.0"
