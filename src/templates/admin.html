@@ -36,6 +36,26 @@
 {% block scripts %}
 <script>
 (function() {
+    var KEY = '_ms_scroll';
+    document.body.addEventListener('htmx:beforeSwap', function(e) {
+        if (e.target.id !== 'message-panel') return;
+        var c = document.querySelector('#message-panel .msg-container');
+        if (!c) return;
+        e.detail[KEY] = { top: c.scrollTop, atBottom: c.scrollTop + c.clientHeight >= c.scrollHeight - 4 };
+    });
+    document.body.addEventListener('htmx:afterSwap', function(e) {
+        if (e.target.id !== 'message-panel') return;
+        var s = e.detail[KEY];
+        if (!s) return;
+        setTimeout(function() {
+            var c = document.querySelector('#message-panel .msg-container');
+            if (c) c.scrollTop = s.atBottom ? c.scrollHeight : s.top;
+        }, 0);
+    });
+})();
+</script>
+<script>
+(function() {
     if (window.__unichat_ws) return;
     var inboxes = "{{ inboxes|join(',') }}";
     if (!inboxes) return;
@@ -51,9 +71,16 @@
                 var convId = container ? container.dataset.convId : null;
 
                 if (convId && convId === data.conversation_id) {
+                    var savedTop = container.scrollTop,
+                        atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 4;
                     htmx.ajax("GET", "/admin/conversations/" + convId + "/messages", {
                         target: "#message-panel",
                         swap: "innerHTML"
+                    }).then(function() {
+                        setTimeout(function() {
+                            var c = document.querySelector('#message-panel .msg-container');
+                            if (c) c.scrollTop = atBottom ? c.scrollHeight : savedTop;
+                        }, 0);
                     });
                 }
 

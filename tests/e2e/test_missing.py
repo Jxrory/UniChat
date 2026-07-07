@@ -237,6 +237,65 @@ class TestWebSocketPush:
         )
 
 
+    def test_ws_push_preserves_scroll_position(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        """WS push must not reset .msg-container scroll to top (bug fix)."""
+        # Seed extra messages so the container overflows and is scrollable
+        for i in range(10):
+            text = f"Seed message {i} for scroll test padding to make container overflow with enough content"
+            page.request.post(
+                f"{e2e_server}/webhooks/test/tg",
+                headers={"X-Webhook-Secret": "e2e-secret"},
+                data=f'{{"text":"{text}","source_id":"e2e-user-1","sender_source_id":"e2e-user-1"}}',
+            )
+        page.wait_for_timeout(1500)
+
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+
+        page.get_by_test_id("conv-row").first.click()
+        page.get_by_test_id("message-panel").wait_for(state="visible", timeout=3000)
+        page.wait_for_timeout(1000)
+
+        # Ensure the container is scrollable
+        scrollable = page.evaluate("""() => {
+            const c = document.querySelector('.msg-container');
+            return c && c.scrollHeight > c.clientHeight;
+        }""")
+        assert scrollable, "Precondition: .msg-container must be scrollable (more content than viewport)"
+
+        # Scroll down — simulating reading older messages
+        page.evaluate("""() => {
+            const c = document.querySelector('.msg-container');
+            c.scrollTop = c.scrollHeight / 2;
+        }""")
+        page.wait_for_timeout(200)
+
+        scroll_before = page.evaluate(
+            "document.querySelector('.msg-container').scrollTop"
+        )
+        assert scroll_before > 0, "Precondition: scroll must be > 0 before push"
+
+        resp = page.request.post(
+            f"{e2e_server}/webhooks/test/tg",
+            headers={"X-Webhook-Secret": "e2e-secret"},
+            data='{"text":"Scroll test message","source_id":"e2e-user-1","sender_source_id":"e2e-user-1"}',
+        )
+        assert resp.status == 200
+        page.wait_for_timeout(2000)
+
+        scroll_after = page.evaluate(
+            "document.querySelector('.msg-container').scrollTop"
+        )
+        # Must not be reset to 0 (the bug)
+        assert scroll_after > 0, (
+            f"Scroll position reset to top! before={scroll_before} after={scroll_after}"
+        )
+
+
 class TestWebSocketReload:
     """E7: WS onclose -> 5s location.reload() (P1)."""
 
