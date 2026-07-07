@@ -4,12 +4,12 @@
 
 ### Added
 
-- 同会话收到新消息时 WebSocket 自动推送 `#message-panel` 局部刷新，无需整页重载（issue #31）：`.msg-container` 增加 `data-conv-id` 属性，`onmessage` 在 `message_type === "incoming"` 且 `conversation_id` 匹配时追加 `htmx.ajax` 刷新消息面板
-- 增加 E2E 测试覆盖 message-panel WebSocket 刷新的两种分支：同会话自动刷新 + 不同会话不打扰（2 个新测试方法）
+- 同会话收到新消息（含外部联系人和 Bot 回复）时 WebSocket 自动推送 `#message-panel` 局部刷新：`.msg-container` 增加 `data-conv-id` 属性，`onmessage` 在 `conversation_id` 匹配时追加 `htmx.ajax` 刷新消息面板
+- 增加 E2E 测试覆盖 message-panel 刷新的三种场景：同会话/不同会话/Bot 回复（3 个测试方法）
 
 ### Fixed
 
-- 修复 outgoing message 导致的 message-panel 竞态：增加 `message_type === "incoming"` 守卫，防止管理员回复时 WS 覆盖正在输入的表单
+- 修复 Bot 回复（OutComing bus，`message_type=outgoing`）被 WS 推送守卫误拦截的问题：移除 `message_type === "incoming"` 限制，所有类型消息均参与匹配判断
 
 ## [0.2.0] - 2026-07-07
 

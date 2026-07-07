@@ -91,6 +91,36 @@ class TestWebSocketPush:
         )
 
 
+    def test_ws_push_refreshes_message_panel_for_bot_reply(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        """Bot reply via OutComing bus -> WS push message_type=outgoing -> panel refresh."""
+        conv_id = seeded_conversation["conv_id"]
+
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+
+        page.get_by_test_id("conv-row").first.click()
+        page.get_by_test_id("message-panel").wait_for(state="visible", timeout=3000)
+
+        page.wait_for_timeout(1000)
+
+        resp = page.request.post(
+            f"{e2e_server}/api/v1/agentbot/reply",
+            headers={"Authorization": "Bearer e2e-token", "Content-Type": "application/json"},
+            data=f'{{"conversation_id":"{conv_id}","content":"Bot reply via WS","handoff":false}}',
+        )
+        assert resp.status == 200
+
+        page.wait_for_timeout(1000)
+
+        bubbles = page.get_by_test_id("msg-bubble").all_text_contents()
+        has_bot_reply = any("Bot reply via WS" in t for t in bubbles)
+        assert has_bot_reply, f"Bot reply not found in bubbles: {bubbles}"
+
+
 class TestWebSocketReload:
     """E7: WS onclose -> 5s location.reload() (P1)."""
 
