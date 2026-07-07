@@ -46,6 +46,16 @@
             var data = JSON.parse(event.data);
             if (data.event === "message.created") {
                 htmx.ajax("GET", "/admin", {target: "#conv-list", swap: "innerHTML"});
+
+                if (data.message_type === "incoming") {
+                    var container = document.querySelector('#message-panel .msg-container');
+                    if (container) {
+                        var convId = container.dataset.convId;
+                        if (convId && convId === data.conversation_id) {
+                            htmx.ajax("GET", "/admin/conversations/" + convId + "/messages", {target: "#message-panel", swap: "innerHTML"});
+                        }
+                    }
+                }
             }
         } catch(e) {
             console.error("WS message error:", e);

@@ -2,7 +2,7 @@
 
 消息聚合平台：把外部 IM 渠道的消息收进来，交给 AgentBot 回复，再把回复发出去。v1 只接 Telegram，Bot-only + 最小转人工。
 
-**当前状态**: 设计阶段，尚无代码。实现前先读 `CONTEXT.md`（领域语言）和 `docs/架构/UniChat-系统架构.md`（架构规范）。
+**当前状态**: 开发阶段，已上线生产。实现前先读 `CONTEXT.md`（领域语言）和 `docs/架构/UniChat-系统架构.md`（架构规范）。
 
 ## 工具链
 
@@ -56,6 +56,9 @@ Bot-only 排除 Chatwoot 全套 SLA/waiting_since/私密笔记/@提及/邮件通
 
 - `docs/架构/参考资料/Hermes-Gateway-架构.md` — ChannelAdapter 插件模式来源
 - `docs/架构/参考资料/Chatwoot-消息系统-架构.md` — source_id 去重/echo 防环/状态机参考
+- `docs/测试方案.md` — 测试分层方案与 E2E 补位原则
+- `docs/e2e测试/测试点清单.md` — E2E 测试覆盖矩阵与 data-testid 清单
+- `docs/e2e测试/AI-Agent-添加E2E测试指南.md` — AI Agent 编写 E2E 测试的标准工作流
 
 ## 部署
 
