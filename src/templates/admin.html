@@ -36,10 +36,12 @@
 {% block scripts %}
 <script>
 (function() {
+    if (window.__unichat_ws) return;
     var inboxes = "{{ inboxes|join(',') }}";
     if (!inboxes) return;
     var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    var ws = new WebSocket(protocol + "//" + window.location.host + "/ws/notifications?inboxes=" + encodeURIComponent(inboxes));
+    window.__unichat_ws = new WebSocket(protocol + "//" + window.location.host + "/ws/notifications?inboxes=" + encodeURIComponent(inboxes));
+    var ws = window.__unichat_ws;
 
     ws.onmessage = function(event) {
         try {
@@ -61,6 +63,7 @@
     };
 
     ws.onclose = function() {
+        window.__unichat_ws = null;
         setTimeout(function() { location.reload(); }, 5000);
     };
 })();
