@@ -53,7 +53,7 @@ class ChannelSender:
 
             adapter = registry.create(inbox.id, inbox.channel_type, inbox.config)
             logger.debug("Sending message: msg_id=%s target=%s", msg.id, contact.source_id)
-            result = await adapter.send_message(contact.source_id, msg.content)
+            result = await adapter.send_message(msg.conversation_id, contact.source_id, msg.content)
 
             if result.ok and result.platform_message_id:
                 msg.source_id = result.platform_message_id

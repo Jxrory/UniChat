@@ -184,7 +184,7 @@ class TelegramAdapter(ChannelAdapter):
 
         return SendResult(ok=False, error="rich_send_failed")
 
-    async def send_message(self, target: str, content: str) -> SendResult:
+    async def send_message(self, conversation_id: str, target: str, content: str) -> SendResult:
         if self._needs_rich(content):
             rich_result = await self._send_rich_message(target, content)
             if rich_result.ok:

@@ -149,7 +149,7 @@ class WhatsAppAdapter(ChannelAdapter):
                 logger.error("WhatsApp API request failed: target=%s error=%s", target, e)
                 return SendResult(ok=False, error=str(e))
 
-    async def send_message(self, target: str, content: str) -> SendResult:
+    async def send_message(self, conversation_id: str, target: str, content: str) -> SendResult:
         formatted = self._format_content(content)
         chunks = self._chunk_text(formatted)
         if not chunks:
