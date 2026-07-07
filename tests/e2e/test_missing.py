@@ -5,7 +5,7 @@ pytestmark = pytest.mark.e2e
 
 
 class TestWebSocketPush:
-    """E6: WS push message.created -> conv-list auto refresh (P0)."""
+    """E6: WS push message.created -> conv-list + message-panel auto refresh (P0)."""
 
     def test_ws_push_refreshes_conv_list(
         self, page: Page, e2e_server: str, seeded_conversation: dict
@@ -33,6 +33,62 @@ class TestWebSocketPush:
         rows_text = page.get_by_test_id("conv-row").all_text_contents()
         has_new = any("e2e-ws-user" in t for t in rows_text)
         assert has_new, f"New conversation not found in rows: {rows_text}"
+
+
+    def test_ws_push_refreshes_message_panel_same_conversation(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+
+        page.get_by_test_id("conv-row").first.click()
+        page.get_by_test_id("message-panel").wait_for(state="visible", timeout=3000)
+
+        page.wait_for_timeout(1000)
+
+        resp = page.request.post(
+            f"{e2e_server}/webhooks/test/tg",
+            headers={"X-Webhook-Secret": "e2e-secret"},
+            data='{"text":"Same conv WS push","source_id":"e2e-user-1","sender_source_id":"e2e-user-1"}',
+        )
+        assert resp.status == 200
+
+        page.wait_for_timeout(1000)
+
+        bubbles = page.get_by_test_id("msg-bubble").all_text_contents()
+        has_new = any("Same conv WS push" in t for t in bubbles)
+        assert has_new, f"New message not found in bubbles: {bubbles}"
+
+    def test_ws_push_does_not_refresh_message_panel_different_conversation(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+
+        page.get_by_test_id("conv-row").first.click()
+        page.get_by_test_id("message-panel").wait_for(state="visible", timeout=3000)
+
+        page.wait_for_timeout(1000)
+
+        bubbles_before = page.get_by_test_id("msg-bubble").all_text_contents()
+
+        resp = page.request.post(
+            f"{e2e_server}/webhooks/test/tg",
+            headers={"X-Webhook-Secret": "e2e-secret"},
+            data='{"text":"Different conv WS push","source_id":"e2e-other-user","sender_source_id":"e2e-other-user"}',
+        )
+        assert resp.status == 200
+
+        page.wait_for_timeout(1000)
+
+        bubbles_after = page.get_by_test_id("msg-bubble").all_text_contents()
+        assert bubbles_after == bubbles_before, (
+            f"Message panel should not change; before={bubbles_before} after={bubbles_after}"
+        )
 
 
 class TestWebSocketReload:
