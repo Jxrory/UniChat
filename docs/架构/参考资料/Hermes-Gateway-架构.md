@@ -296,17 +296,7 @@ gateway:
         thread_sessions_per_user: false
 ```
 
-环境变量（仅用于密钥，非密钥配置走 `config.yaml`）：
-
-| 变量 | 说明 |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | Bot 令牌 |
-| `TELEGRAM_ALLOWED_USERS` | 允许使用的用户 ID 列表（逗号分隔） |
-| `TELEGRAM_ALLOW_ALL_USERS` | 允许所有用户（开发用） |
-| `TELEGRAM_HOME_CHANNEL` | 默认投递频道 ID |
-| `TELEGRAM_PROXY` | HTTP 代理 URL |
-| `TELEGRAM_WEBHOOK_URL` | Webhook 模式 URL |
-| `TELEGRAM_WEBHOOK_PORT` | Webhook 本地监听端口 |
+所有配置（含密钥）统一写入 `config.yaml`（文件权限 600）。
 | `TELEGRAM_WEBHOOK_SECRET` | Webhook 密钥（防伪造，必填） |
 
 ---

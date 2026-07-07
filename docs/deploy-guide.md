@@ -24,27 +24,16 @@ cd /opt/unichat
 sudo -u unichat uv sync --frozen
 ```
 
-### 1.3 环境变量
+### 1.3 配置 config.yaml
 
 ```bash
-cp /opt/unichat/.env.example /opt/unichat/.env
-# 编辑 .env，填入真实值
+sudo -u unichat cp /opt/unichat/config.yaml.example /opt/unichat/config.yaml
+sudo -u unichat vi /opt/unichat/config.yaml
+# 填入各 Token/Secret/URL 等实际值
+sudo chmod 600 /opt/unichat/config.yaml
 ```
 
-**`.env` 必需的变量：**
-
-| 变量 | 说明 |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token |
-| `TELEGRAM_WEBHOOK_SECRET` | Telegram webhook 验证密钥 |
-| `WA_PHONE_NUMBER_ID` | WhatsApp Cloud API 号码 ID |
-| `WA_TOKEN` | WhatsApp 永久/临时 Token |
-| `WA_WEBHOOK_VERIFY_TOKEN` | WhatsApp webhook verify token |
-| `AGENTBOT_URL` | AgentBot 服务地址 |
-| `AGENTBOT_TOKEN` | AgentBot 认证 Token |
-| `ADMIN_TOKEN` | Admin UI 登录密钥 |
-
-可选变量见 `.env.example`。
+所有配置（包括密钥）统一写在 `config.yaml`，不再使用 `.env` 文件。
 
 ### 1.4 nginx
 

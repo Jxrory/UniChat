@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -60,7 +59,7 @@ _TEST_INBOXES = [
         },
     ),
 ]
-_TEST_SERVER = ServerConfig(host="0.0.0.0", port=8000, admin_token="test-admin-token")
+_TEST_SERVER = ServerConfig(host="0.0.0.0", port=8000, admin_token="test-admin-token", env="test")
 _TEST_CONFIG = AppConfig(inboxes=_TEST_INBOXES, server=_TEST_SERVER, database_url="sqlite://")
 
 
@@ -377,23 +376,21 @@ class TestWebhookRoute:
 
 
 class TestConfig:
-    def test_env_substitution(self, tmp_path: Path) -> None:
-        os.environ["TEST_BOT_TOKEN"] = "env-token-123"
-        os.environ["TEST_SECRET"] = "env-secret-456"
-
+    def test_load_config(self, tmp_path: Path) -> None:
         yaml_content = """
 inboxes:
   - id: tg
     name: Test
     channel_type: telegram
     config:
-      token: "${TEST_BOT_TOKEN}"
-      webhook_secret: "${TEST_SECRET}"
+      token: "test-token"
+      webhook_secret: "test-secret"
 
 server:
   host: "0.0.0.0"
   port: 8000
-  admin_token: "${TEST_SECRET}"
+  admin_token: "test-admin"
+  env: "development"
 
 database:
   url: "sqlite:///./test.db"
@@ -404,62 +401,11 @@ database:
         from src.config import load_config
 
         config = load_config(str(cfg_path))
-        assert config.inboxes[0].config["token"] == "env-token-123"
-        assert config.inboxes[0].config["webhook_secret"] == "env-secret-456"
-        assert config.server.admin_token == "env-secret-456"
-
-    def test_missing_env_var_raises_error(self, tmp_path: Path) -> None:
-        yaml_content = """
-inboxes:
-  - id: tg
-    name: Test
-    channel_type: telegram
-    config:
-      token: "${MISSING_VAR}"
-
-server:
-  host: "0.0.0.0"
-  port: 8000
-  admin_token: "admin"
-
-database:
-  url: "sqlite:///./test.db"
-"""
-        cfg_path = tmp_path / "test_config_bad.yaml"
-        cfg_path.write_text(yaml_content)
-
-        from src.config import load_config
-
-        with pytest.raises(ValueError, match="MISSING_VAR"):
-            load_config(str(cfg_path))
-
-    def test_database_url_override(self, tmp_path: Path) -> None:
-        os.environ["DATABASE_URL"] = "sqlite:///override.db"
-        yaml_content = """
-inboxes:
-  - id: tg
-    name: Test
-    channel_type: telegram
-    config:
-      token: "${TEST_BOT_TOKEN}"
-      webhook_secret: "secret"
-
-server:
-  host: "0.0.0.0"
-  port: 8000
-  admin_token: "admin"
-
-database:
-  url: "sqlite:///./test.db"
-"""
-        os.environ["TEST_BOT_TOKEN"] = "tok"
-        cfg_path = tmp_path / "test_config_override.yaml"
-        cfg_path.write_text(yaml_content)
-
-        from src.config import load_config
-
-        config = load_config(str(cfg_path))
-        assert config.database_url == "sqlite:///override.db"
+        assert config.inboxes[0].config["token"] == "test-token"
+        assert config.inboxes[0].config["webhook_secret"] == "test-secret"
+        assert config.server.admin_token == "test-admin"
+        assert config.server.env == "development"
+        assert config.database_url == "sqlite:///./test.db"
 
 
 class TestBus:

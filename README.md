@@ -24,9 +24,7 @@ Telegram/WhatsApp webhook → routes/webhook.py → adapter.verify → adapter.p
 # 安装依赖
 uv sync
 
-# 复制环境变量模板
-cp .env.example .env
-# 编辑 .env 填入 TELEGRAM_BOT_TOKEN、AGENTBOT_URL 等
+# 编辑 config.yaml 填入 TELEGRAM_BOT_TOKEN、AGENTBOT_URL 等
 
 # 启动开发服务器
 uv run uvicorn src.main:app --reload
@@ -34,20 +32,16 @@ uv run uvicorn src.main:app --reload
 
 ## 配置
 
-所有配置统一在 `config.yaml`，密钥走环境变量 `${VAR}` 替换。
+所有配置统一在 `config.yaml`。各渠道的 token、secret 等敏感信息也直接写入 `config.yaml`（确保文件权限 600）。
 
 ```yaml
 inboxes:
   - id: tg
     channel_type: telegram
     config:
-      token: "${TELEGRAM_BOT_TOKEN}"
-      agentbot_url: "${AGENTBOT_URL}"
+      token: "<TELEGRAM_BOT_TOKEN>"
+      agentbot_url: "<AGENTBOT_URL>"
 ```
-
-必要环境变量：`TELEGRAM_BOT_TOKEN`、`TELEGRAM_WEBHOOK_SECRET`、`AGENTBOT_URL`、`AGENTBOT_TOKEN`、`ADMIN_TOKEN`。
-
-可选：`DATABASE_URL`（默认 SQLite）、`LOG_LEVEL`（默认 DEBUG）。
 
 ## 测试
 

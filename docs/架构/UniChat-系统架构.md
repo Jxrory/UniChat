@@ -550,7 +550,6 @@ After=network.target
 Type=simple
 User=unichat
 WorkingDirectory=/opt/unichat
-EnvironmentFile=/opt/unichat/.env
 ExecStart=/opt/unichat/.venv/bin/python -m unichat.main
 Restart=on-failure
 RestartSec=5

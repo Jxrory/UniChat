@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -28,14 +27,15 @@ from src.services.ws_notifier import WSNotifier
 logger = logging.getLogger("unichat.app")
 
 register_telegram()
-if os.environ.get("UNICHAT_ENV") != "production":
-    register_test()
 register_whatsapp()
 
 
 def create_app(config: AppConfig | None = None) -> FastAPI:
     if config is None:
         config = load_config()
+
+    if config.server.env != "production":
+        register_test()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

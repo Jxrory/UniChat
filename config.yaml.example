@@ -10,6 +10,17 @@ inboxes:
       allowed_senders:
         - "*"
 
+  # WhatsApp 渠道（按需启用）
+  # - id: wa
+  #   name: "WhatsApp 渠道"
+  #   channel_type: whatsapp
+  #   config:
+  #     phone_number_id: "<WA_PHONE_NUMBER_ID>"
+  #     token: "<WA_TOKEN>"
+  #     webhook_secret: "<WA_WEBHOOK_VERIFY_TOKEN>"
+  #     agentbot_url: "<AGENTBOT_URL>"
+  #     agentbot_token: "<AGENTBOT_TOKEN>"
+
   - id: test
     name: "测试渠道"
     channel_type: test
@@ -19,9 +30,11 @@ inboxes:
 server:
   host: "0.0.0.0"
   port: 8000
-  env: "development"
+  env: "development"           # development / production（控制 test adapter 注册）
   log_level: "DEBUG"
   admin_token: "<ADMIN_TOKEN>"
 
 database:
   url: "sqlite:///./unichat.db"
+  # PostgreSQL:
+  # url: "postgresql://user:password@host:5432/unichat"

@@ -35,7 +35,7 @@ Telegram/WhatsApp webhook → routes/webhook.py → adapter.verify → adapter.p
 
 ### 配置
 
-Inbox 和 AgentBot 配在 `config.yaml`（YAML，不建表），密钥走环境变量。
+Inbox 和 AgentBot 配在 `config.yaml`（YAML，不建表），密钥也直接写在 `config.yaml` 中（文件权限设 600）。
 
 ## 领域语言
 
