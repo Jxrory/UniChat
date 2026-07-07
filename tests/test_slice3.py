@@ -909,6 +909,8 @@ class TestFullHandoffFlow:
             finally:
                 session.close()
 
+            await _drain_all_buses()
+
             # Step 2: Human replies → message sent via OutComing
             reply_resp = await client.post(
                 f"/api/v1/conversations/{conv_id}/reply",

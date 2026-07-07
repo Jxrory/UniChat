@@ -54,7 +54,7 @@ class TestSendMessageShort:
         mock_result = SendResult(ok=True, platform_message_id="100")
 
         with patch.object(adapter, "_send_single", AsyncMock(return_value=mock_result)) as mock_send:
-            result = await adapter.send_message("12345", content)
+            result = await adapter.send_message("conv-1", "12345", content)
 
             assert result.ok is True
             assert result.platform_message_id == "100"
@@ -69,7 +69,7 @@ class TestSendMessageLong:
 
         with patch.object(adapter, "_send_single", AsyncMock()) as mock_send:
             mock_send.side_effect = [mock_first, mock_second]
-            result = await adapter.send_message("12345", content)
+            result = await adapter.send_message("conv-1", "12345", content)
 
             assert result.ok is True
             assert result.platform_message_id == "200"
@@ -83,7 +83,7 @@ class TestSendMessageLong:
 
         with patch.object(adapter, "_send_single", AsyncMock()) as mock_send:
             mock_send.side_effect = results
-            result = await adapter.send_message("12345", content)
+            result = await adapter.send_message("conv-1", "12345", content)
 
             assert result.ok is True
             assert result.platform_message_id == "300"
@@ -98,7 +98,7 @@ class TestSendMessageFailure:
             mock_send.side_effect = [
                 SendResult(ok=False, error="API error"),
             ]
-            result = await adapter.send_message("12345", content)
+            result = await adapter.send_message("conv-1", "12345", content)
 
             assert result.ok is False
             assert result.error == "API error"
@@ -113,7 +113,7 @@ class TestSendMessageFailure:
 
         with patch.object(adapter, "_send_single", AsyncMock()) as mock_send:
             mock_send.side_effect = mock_results
-            result = await adapter.send_message("12345", content)
+            result = await adapter.send_message("conv-1", "12345", content)
 
             assert result.ok is False
             assert result.error == "rate limited"

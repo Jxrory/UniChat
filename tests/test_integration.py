@@ -872,7 +872,22 @@ class TestReplyRoute:
             assert msg.handoff is True
 
             out_bus = get_out_coming_bus()
+            assert not out_bus._queue.empty()
+            ev = await out_bus._queue.get()
+            await out_bus._dispatch(ev)
             assert out_bus._queue.empty()
+
+            activity_msgs = (
+                session.query(Message)
+                .filter(
+                    Message.conversation_id == conv_id,
+                    Message.message_type == "activity",
+                    Message.sender_type == "system",
+                )
+                .all()
+            )
+            assert len(activity_msgs) == 1
+            assert activity_msgs[0].content == "转人工中，请稍候"
         finally:
             session.close()
 

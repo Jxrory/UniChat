@@ -188,7 +188,7 @@ class TestSendMessage:
 
         with patch("httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client_mock
-            result = await send_adapter.send_message("5511999999999", "Hello")
+            result = await send_adapter.send_message("conv-1", "5511999999999", "Hello")
 
         assert result.ok is True
         assert result.platform_message_id == "wamid.new123"
@@ -204,7 +204,7 @@ class TestSendMessage:
 
         with patch("httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client_mock
-            result = await send_adapter.send_message("5511999999999", "Hello")
+            result = await send_adapter.send_message("conv-1", "5511999999999", "Hello")
 
         assert result.ok is False
         assert "Bad request" in result.error
@@ -215,7 +215,7 @@ class TestSendMessage:
 
         with patch("httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client_mock
-            result = await send_adapter.send_message("5511999999999", "Hello")
+            result = await send_adapter.send_message("conv-1", "5511999999999", "Hello")
 
         assert result.ok is False
         assert "timed out" in result.error.lower()
@@ -231,7 +231,7 @@ class TestSendMessage:
 
         with patch("httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client_mock
-            result = await send_adapter.send_message("5511999999999", "Hello")
+            result = await send_adapter.send_message("conv-1", "5511999999999", "Hello")
 
         assert result.ok is False
         assert "Invalid token" in result.error
@@ -254,7 +254,7 @@ class TestSendMessage:
 
         with patch("httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client_mock
-            result = await send_adapter.send_message("5511999999999", long_content)
+            result = await send_adapter.send_message("conv-1", "5511999999999", long_content)
 
         assert result.ok is True
         assert result.platform_message_id == "wamid.chunk1"
@@ -274,7 +274,7 @@ class TestSendMessage:
 
         with patch("httpx.AsyncClient") as mock_cls:
             mock_cls.return_value.__aenter__.return_value = client_mock
-            result = await send_adapter.send_message("5511999999999", exact_content)
+            result = await send_adapter.send_message("conv-1", "5511999999999", exact_content)
 
         assert result.ok is True
         assert result.platform_message_id == "wamid.exact"
@@ -285,7 +285,7 @@ class TestSendMessage:
             inbox_id="wa-test",
             config={"token": "test-token", "webhook_secret": "test-secret"},
         )
-        result = await adapter.send_message("5511999999999", "Hello")
+        result = await adapter.send_message("conv-1", "5511999999999", "Hello")
         assert result.ok is False
         assert result.error == "phone_number_id not configured"
 
@@ -294,6 +294,6 @@ class TestSendMessage:
             inbox_id="wa-test",
             config={"phone_number_id": "123456789", "webhook_secret": "test-secret"},
         )
-        result = await adapter.send_message("5511999999999", "Hello")
+        result = await adapter.send_message("conv-1", "5511999999999", "Hello")
         assert result.ok is False
         assert result.error == "token not configured"

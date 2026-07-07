@@ -322,7 +322,7 @@ class TestRichFallbackToPlain:
         adapter._rich_send_disabled = True
 
         with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_plain:
-            result = await adapter.send_message("123", RICH_CONTENT)
+            result = await adapter.send_message("conv-1", "123", RICH_CONTENT)
 
         assert result.ok is True
         assert result.platform_message_id == "1"
@@ -332,7 +332,7 @@ class TestRichFallbackToPlain:
         content = "# " + "x" * (TelegramAdapter.RICH_MESSAGE_MAX_CHARS)
 
         with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_single:
-            result = await adapter.send_message("123", content)
+            result = await adapter.send_message("conv-1", "123", content)
 
         assert result.ok is True
         assert result.platform_message_id == "1"
@@ -351,7 +351,7 @@ class TestRichFallbackToPlain:
             mock_cls.return_value.__aenter__.return_value = mock_client
 
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_plain:
-                result = await adapter.send_message("123", RICH_CONTENT)
+                result = await adapter.send_message("conv-1", "123", RICH_CONTENT)
 
         assert result.ok is True
         assert result.platform_message_id == "1"
@@ -370,7 +370,7 @@ class TestRichFallbackToPlain:
             mock_cls.return_value.__aenter__.return_value = mock_client
 
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_plain:
-                result = await adapter.send_message("123", RICH_CONTENT)
+                result = await adapter.send_message("conv-1", "123", RICH_CONTENT)
 
         assert result.ok is True
         assert result.platform_message_id == "1"
@@ -384,7 +384,7 @@ class TestRichFallbackToPlain:
             mock_cls.return_value.__aenter__.return_value = mock_client
 
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_plain:
-                result = await adapter.send_message("123", RICH_CONTENT)
+                result = await adapter.send_message("conv-1", "123", RICH_CONTENT)
 
         assert result.ok is True
         assert result.platform_message_id == "1"
@@ -395,7 +395,7 @@ class TestRichFallbackToPlain:
 
         with patch.object(adapter, "_send_rich_message", AsyncMock()) as mock_rich:
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_plain:
-                result = await adapter.send_message("123", PLAIN_CONTENT)
+                result = await adapter.send_message("conv-1", "123", PLAIN_CONTENT)
 
         assert result.ok is True
         mock_rich.assert_not_called()

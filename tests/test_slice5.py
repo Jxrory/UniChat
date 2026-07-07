@@ -100,7 +100,7 @@ class TestSendMessageRichRouting:
     async def test_non_rich_content_goes_through_plain_text(self, adapter: TelegramAdapter) -> None:
         with patch.object(adapter, "_send_rich_message", AsyncMock()) as mock_rich:
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))):
-                result = await adapter.send_message("123", "Hello, world!")
+                result = await adapter.send_message("conv-1", "123", "Hello, world!")
                 assert result.ok is True
                 mock_rich.assert_not_called()
 
@@ -108,7 +108,7 @@ class TestSendMessageRichRouting:
         content = "# Heading\n\nSome text"
         with patch.object(adapter, "_send_rich_message", AsyncMock(return_value=SendResult(ok=True, platform_message_id="99"))) as mock_rich:
             with patch.object(adapter, "_send_single", AsyncMock()) as mock_plain:
-                result = await adapter.send_message("123", content)
+                result = await adapter.send_message("conv-1", "123", content)
                 assert result.ok is True
                 assert result.platform_message_id == "99"
                 mock_rich.assert_awaited_once_with("123", content)
@@ -118,7 +118,7 @@ class TestSendMessageRichRouting:
         content = "# Heading\n\nSome text"
         with patch.object(adapter, "_send_rich_message", AsyncMock(return_value=SendResult(ok=False, error="API error"))):
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=True, platform_message_id="1"))) as mock_plain:
-                result = await adapter.send_message("123", content)
+                result = await adapter.send_message("conv-1", "123", content)
                 assert result.ok is True
                 assert result.platform_message_id == "1"
                 mock_plain.assert_awaited_once_with("123", content)
@@ -127,7 +127,7 @@ class TestSendMessageRichRouting:
         content = "# Heading\n\nSome text"
         with patch.object(adapter, "_send_rich_message", AsyncMock(return_value=SendResult(ok=False, error="API error"))):
             with patch.object(adapter, "_send_single", AsyncMock(return_value=SendResult(ok=False, error="plain error"))) as mock_plain:
-                result = await adapter.send_message("123", content)
+                result = await adapter.send_message("conv-1", "123", content)
                 assert result.ok is False
                 assert result.error == "plain error"
                 mock_plain.assert_awaited_once_with("123", content)
@@ -136,7 +136,7 @@ class TestSendMessageRichRouting:
         content = "| a | b |\n|---|---|\n| 1 | 2 |"
         with patch.object(adapter, "_send_rich_message", AsyncMock(return_value=SendResult(ok=True, platform_message_id="200"))):
             with patch.object(adapter, "_send_single", AsyncMock()):
-                result = await adapter.send_message("123", content)
+                result = await adapter.send_message("conv-1", "123", content)
                 assert result.ok is True
                 assert result.platform_message_id == "200"
 
@@ -144,7 +144,7 @@ class TestSendMessageRichRouting:
         content = "```python\nprint('hello')\n```"
         with patch.object(adapter, "_send_rich_message", AsyncMock(return_value=SendResult(ok=True, platform_message_id="300"))):
             with patch.object(adapter, "_send_single", AsyncMock()):
-                result = await adapter.send_message("123", content)
+                result = await adapter.send_message("conv-1", "123", content)
                 assert result.ok is True
                 assert result.platform_message_id == "300"
 
@@ -216,7 +216,7 @@ class TestSendRichMessageIntegration:
                     SendResult(ok=True, platform_message_id="400"),
                     SendResult(ok=True, platform_message_id="401"),
                 ]
-                result = await adapter.send_message("123", content)
+                result = await adapter.send_message("conv-1", "123", content)
                 assert result.ok is True
                 assert result.platform_message_id == "400"
                 assert mock_single.await_count == 2
