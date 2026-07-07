@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -114,11 +116,125 @@ class TestWebSocketPush:
         )
         assert resp.status == 200
 
+        bot_bubble = page.locator(
+            '[data-testid="msg-bubble"][data-sender="agentbot"]'
+        )
+        expect(bot_bubble.first).to_be_visible(timeout=5000)
+        expect(bot_bubble.first).to_contain_text("Bot reply via WS")
+
+        # agentbot bubble should be right-aligned via CSS
+        expect(bot_bubble.first).to_have_class(
+            re.compile(r"msg-bubble-agentbot")
+        )
+
+
+    def test_ws_push_no_duplicate_message_panel(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        """WS push must not create duplicate #message-panel elements."""
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+
+        page.get_by_test_id("conv-row").first.click()
+        page.get_by_test_id("message-panel").wait_for(state="visible", timeout=3000)
         page.wait_for_timeout(1000)
 
+        # Send webhook + bot reply rapidly (triggers two WS pushes)
+        resp = page.request.post(
+            f"{e2e_server}/webhooks/test/tg",
+            headers={"X-Webhook-Secret": "e2e-secret"},
+            data='{"text":"Rapid fire","source_id":"e2e-user-1","sender_source_id":"e2e-user-1"}',
+        )
+        assert resp.status == 200
+
+        page.wait_for_timeout(2000)
+
+        panels = page.evaluate(
+            "document.querySelectorAll('#message-panel').length"
+        )
+        assert panels == 1, f"Expected 1 #message-panel, got {panels}"
+
+    def test_ws_push_multiple_messages_maintains_ordering(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        """Multiple messages to same conv — conv stays at top of list."""
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+        page.wait_for_timeout(1000)
+
+        # Get first row's conv-id before any messages
+        first_row = page.get_by_test_id("conv-row").first
+        original_id = first_row.get_attribute("data-conv-id")
+
+        # Send multiple messages to this conversation
+        for i in range(3):
+            resp = page.request.post(
+                f"{e2e_server}/webhooks/test/tg",
+                headers={"X-Webhook-Secret": "e2e-secret"},
+                data=f'{{"text":"Follow-up {i}","source_id":"e2e-user-1","sender_source_id":"e2e-user-1"}}',
+            )
+            assert resp.status == 200
+            page.wait_for_timeout(1000)
+
+        page.wait_for_timeout(1000)
+
+        # The seeded conversation should still be first (most recent activity)
+        first_row = page.get_by_test_id("conv-row").first
+        current_id = first_row.get_attribute("data-conv-id")
+        assert current_id == original_id, (
+            f"Expected conv {original_id} at top, got {current_id}"
+        )
+
+    def test_ws_push_no_cross_contamination_on_other_conv(
+        self, page: Page, e2e_server: str, seeded_conversation: dict
+    ) -> None:
+        """Push to conv A, then click conv B — must show only conv B's messages."""
+        page.goto(f"{e2e_server}/admin/login")
+        page.get_by_test_id("login-token").fill("e2e-token")
+        page.get_by_test_id("login-submit").click()
+        page.wait_for_url("**/admin")
+
+        # Create a second conversation via webhook
+        resp = page.request.post(
+            f"{e2e_server}/webhooks/test/tg",
+            headers={"X-Webhook-Secret": "e2e-secret"},
+            data='{"text":"Second conv","source_id":"e2e-second-user","sender_source_id":"e2e-second-user"}',
+        )
+        assert resp.status == 200
+        page.wait_for_timeout(2000)
+
+        conv_rows = page.get_by_test_id("conv-row")
+        assert conv_rows.count() >= 2
+
+        # Click the seeded conversation (first conv row)
+        conv_rows.first.click()
+        page.get_by_test_id("message-panel").wait_for(state="visible", timeout=3000)
+        page.wait_for_timeout(500)
+
+        # Send a message to the seeded conversation via WS push
+        resp = page.request.post(
+            f"{e2e_server}/webhooks/test/tg",
+            headers={"X-Webhook-Secret": "e2e-secret"},
+            data='{"text":"New msg for seeded conv","source_id":"e2e-user-1","sender_source_id":"e2e-user-1"}',
+        )
+        assert resp.status == 200
+        page.wait_for_timeout(2000)
+
+        # Now click the second conversation
+        conv_rows = page.get_by_test_id("conv-row")
+        conv_rows.nth(1).click()
+        page.wait_for_timeout(1500)
+
         bubbles = page.get_by_test_id("msg-bubble").all_text_contents()
-        has_bot_reply = any("Bot reply via WS" in t for t in bubbles)
-        assert has_bot_reply, f"Bot reply not found in bubbles: {bubbles}"
+        combined = " ".join(bubbles)
+        assert "Second conv" in combined, f"Expected second conv message in {combined}"
+        assert "New msg for seeded conv" not in combined, (
+            f"Seeded conv message leaked into second conv: {combined}"
+        )
 
 
 class TestWebSocketReload:

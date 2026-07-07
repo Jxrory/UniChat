@@ -126,11 +126,12 @@ class IngestService:
         )
         if conversation is not None:
             logger.debug("Conversation found: id=%s status=%s", conversation.id, conversation.status)
+            now = datetime.now(timezone.utc)
+            conversation.last_activity_at = now
             if validate_transition(conversation.status, "active"):
                 conversation.status = "active"
-                conversation.last_activity_at = datetime.now(timezone.utc)
-                session.flush()
                 logger.debug("Conversation re-activated: id=%s (was %s)", conversation.id, conversation.status)
+            session.flush()
             return conversation
 
         conversation = Conversation(

@@ -36,6 +36,7 @@ def _get_messages_and_conversation(conv_id: str) -> tuple[dict | None, list[dict
     try:
         conversation = session.query(Conversation).filter(Conversation.id == conv_id).first()
         if not conversation:
+            logger.warning("Conversation not found: conv_id=%s", conv_id)
             return None, []
         messages = (
             session.query(Message)
@@ -43,6 +44,9 @@ def _get_messages_and_conversation(conv_id: str) -> tuple[dict | None, list[dict
             .order_by(Message.created_at.asc())
             .all()
         )
+        logger.debug("Messages loaded: conv_id=%s count=%d", conv_id, len(messages))
+        for m in messages:
+            logger.debug("  msg: id=%s sender_type=%s message_type=%s content=%.50s", m.id, m.sender_type, m.message_type, m.content)
         return _to_dict(conversation), [_to_dict(m) for m in messages]
     finally:
         session.close()
@@ -135,6 +139,48 @@ async def admin_dashboard(request: Request):
 
     return templates.TemplateResponse(
         request, "admin.html", {"authenticated": True, "conversations": conversations, "inboxes": inboxes}
+    )
+
+
+@router.get("/admin/conversations/list")
+async def conversation_list(request: Request):
+    """Return just the conv-list partial (no full page, avoids htmx OOB collision)."""
+    if not request.session.get("authenticated"):
+        return RedirectResponse(url="/admin/login", status_code=302)
+
+    session = get_session()
+    try:
+        conversations = (
+            session.query(
+                Conversation.id,
+                Conversation.status,
+                Conversation.inbox_id,
+                Conversation.last_activity_at,
+                Contact.name.label("contact_name"),
+                Contact.source_id.label("contact_source_id"),
+                Message.content.label("last_preview"),
+            )
+            .join(Contact, Conversation.contact_id == Contact.id)
+            .outerjoin(
+                Message,
+                Message.id
+                == (
+                    session.query(Message.id)
+                    .filter(Message.conversation_id == Conversation.id)
+                    .order_by(Message.created_at.desc())
+                    .limit(1)
+                    .correlate(Conversation)
+                    .scalar_subquery()
+                ),
+            )
+            .order_by(Conversation.last_activity_at.desc())
+            .all()
+        )
+    finally:
+        session.close()
+
+    return templates.TemplateResponse(
+        request, "_conv_list.html", {"authenticated": True, "conversations": conversations}
     )
 
 

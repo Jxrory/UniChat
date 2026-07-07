@@ -272,6 +272,53 @@ class TestAdminReplyFlow:
         finally:
             session.close()
 
+    async def test_agentbot_message_renders_with_correct_css(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """AgentBot messages render with msg-bubble-agentbot class and data-sender."""
+        session = get_session()
+        try:
+            contact = Contact(source_id="12345", name="Test")
+            session.add(contact)
+            session.flush()
+            ci = ContactInbox(contact_id=contact.id, inbox_id="tg", source_id="12345")
+            session.add(ci)
+            session.flush()
+            conv = Conversation(inbox_id="tg", contact_id=contact.id, status="active")
+            session.add(conv)
+            session.flush()
+            conv_id = conv.id
+
+            session.add(Message(
+                conversation_id=conv_id,
+                inbox_id="tg",
+                sender_type="contact",
+                message_type="incoming",
+                content="Hello",
+                status="sent",
+            ))
+            session.add(Message(
+                conversation_id=conv_id,
+                inbox_id="tg",
+                sender_type="agentbot",
+                message_type="outgoing",
+                content="Bot reply text",
+                handoff=False,
+                status="pending",
+            ))
+            session.commit()
+        finally:
+            session.close()
+
+        await client.post("/admin/login", data={"token": "test-admin-token"})
+
+        resp = await client.get(f"/admin/conversations/{conv_id}/messages")
+        assert resp.status_code == 200
+        assert b'data-sender="agentbot"' in resp.content
+        assert b"msg-bubble-agentbot" in resp.content
+        assert b"Bot reply text" in resp.content
+        assert b"Bot" in resp.content
+
     async def test_resolve_conversation(
         self, client: httpx.AsyncClient
     ) -> None:
