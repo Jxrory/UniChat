@@ -302,17 +302,18 @@ var widgetMarkdownOverrides = [
   "#unichat-widget .uw-msg .markdown-body img { border-radius: 10px; margin: 4px 0; }",
   /* 链接 */
   "#unichat-widget .uw-msg .markdown-body a { color: inherit; word-break: break-all; }",
-  /* contact 气泡（彩色背景，白色文字）：套用 dark 主题色系 */
-  "#unichat-widget .uw-msg.contact .markdown-body pre { background: #151b23; }",
-  "#unichat-widget .uw-msg.contact .markdown-body code { background: #656c7633; }",
-  "#unichat-widget .uw-msg.contact .markdown-body blockquote { border-left-color: #3d444d; color: #9198a1; }",
-  "#unichat-widget .uw-msg.contact .markdown-body table { border: 1px solid #3d444d; border-radius: 8px; }",
+  /* contact 气泡（彩色背景，白色文字）：半透明色系透出底色 */
+  "#unichat-widget .uw-msg.contact .markdown-body pre { background: rgba(0,0,0,0.3); color: #f0f6fc; }",
+  "#unichat-widget .uw-msg.contact .markdown-body code { background: rgba(255,255,255,0.13); }",
+  "#unichat-widget .uw-msg.contact .markdown-body blockquote { border-left-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }",
+  "#unichat-widget .uw-msg.contact .markdown-body h1,",
+  "#unichat-widget .uw-msg.contact .markdown-body h2 { border-bottom-color: rgba(255,255,255,0.2); }",
+  "#unichat-widget .uw-msg.contact .markdown-body table { border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; }",
   "#unichat-widget .uw-msg.contact .markdown-body th,",
-  "#unichat-widget .uw-msg.contact .markdown-body td { border: 1px solid #3d444d; padding: 6px 10px; }",
-  "#unichat-widget .uw-msg.contact .markdown-body th { font-weight: 600; }",
-  "#unichat-widget .uw-msg.contact .markdown-body table tr { background: #0d1117; }",
-  "#unichat-widget .uw-msg.contact .markdown-body table tr:nth-child(2n) { background: #151b23; }",
-  "#unichat-widget .uw-msg.contact .markdown-body hr { background: #3d444d; }",
+  "#unichat-widget .uw-msg.contact .markdown-body td { border: 1px solid rgba(255,255,255,0.15); padding: 6px 10px; }",
+  "#unichat-widget .uw-msg.contact .markdown-body table tr { background: rgba(0,0,0,0.2); }",
+  "#unichat-widget .uw-msg.contact .markdown-body table tr:nth-child(2n) { background: rgba(0,0,0,0.32); }",
+  "#unichat-widget .uw-msg.contact .markdown-body hr { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.15); }",
   /* activity 消息 */
   "#unichat-widget .uw-activity .markdown-body { font-style: italic; }",
   "#unichat-widget .uw-activity .markdown-body p { margin: 0; }",
