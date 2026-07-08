@@ -23,18 +23,10 @@ def init_db(database_url: str, **engine_kwargs: Any) -> None:
 
 
 def run_migrations() -> None:
-    from alembic.command import stamp, upgrade
+    from alembic.command import upgrade
     from alembic.config import Config as AlembicConfig
-    from alembic.script import ScriptDirectory
-    from sqlalchemy import inspect
 
     cfg = AlembicConfig("alembic.ini")
-
-    inspector = inspect(_engine)
-    if "alembic_version" not in inspector.get_table_names():
-        script = ScriptDirectory.from_config(cfg)
-        stamp(cfg, script.get_base())
-
     upgrade(cfg, "head")
     logger.info("Database migrations up to date")
 
