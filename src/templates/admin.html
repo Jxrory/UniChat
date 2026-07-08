@@ -52,6 +52,26 @@ function renderMarkdownBubbles() {
 }
 renderMarkdownBubbles();
 document.addEventListener('htmx:afterSettle', renderMarkdownBubbles);
+
+/* Reply textarea: Enter 发送, Shift+Enter 换行, 自动增高 */
+function setupReplyInput(e) {
+  var el = e.target;
+  if (el.tagName !== 'TEXTAREA' || !el.classList.contains('reply-input')) return;
+  if (el.dataset.replySetup) return;
+  el.dataset.replySetup = '1';
+  el.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      ev.preventDefault();
+      el.form && el.form.requestSubmit();
+    }
+  });
+  el.addEventListener('input', function() {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  });
+}
+document.addEventListener('focusin', setupReplyInput);
+setupReplyInput({ target: document.querySelector('.reply-input') || {} });
 </script>
 <script>
 (function() {

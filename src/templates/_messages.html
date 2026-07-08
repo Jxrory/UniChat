@@ -47,7 +47,7 @@
           hx-target="#message-panel"
           hx-swap="innerHTML"
           hx-trigger="submit">
-        <input class="input" type="text" name="content" placeholder="输入回复..." required autofocus data-testid="reply-input">
+        <textarea class="input reply-input" name="content" rows="1" placeholder="输入回复..." required data-testid="reply-input"></textarea>
         <button class="btn btn-primary" type="submit" data-testid="reply-submit">发送</button>
     </form>
 </div>
