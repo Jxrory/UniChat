@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0.2] - 2026-07-08
+
+### Added
+
+- **Widget Markdown 显示支持**: Widget 气泡内消息（AgentBot 回复 + 访客发送）现支持 Markdown 格式渲染，包括粗体、斜体、代码块、表格、图片、列表、引用等，使用 marked + DOMPurify 安全渲染
+- **widget/ 子项目**: 独立的 Node.js 构建子项目（esbuild 打包），源码位于 `widget/src/`，产物提交到 `src/static/widget.js`
+- **CI 产物一致性校验**: Pre-merge 步骤自动执行 `npm run build` 并 diff 检查产物与源码一致，防止改源码忘 build
+
 ## [0.3.1] - 2026-07-08
 
 ### Fixed

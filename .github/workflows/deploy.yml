@@ -15,6 +15,21 @@ jobs:
         run: uv python install
       - name: Install dependencies
         run: uv sync --frozen
+      - name: Set up Node for widget build check
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify widget bundle is up to date
+        working-directory: widget
+        run: |
+          npm ci
+          npm run build
+          cd ..
+          if ! git diff --quiet -- src/static/widget.js; then
+            echo "::error::src/static/widget.js is out of date. Run 'cd widget && npm run build' and commit the result."
+            git diff --stat -- src/static/widget.js
+            exit 1
+          fi
       - name: Lint
         run: uv run ruff check src/ tests/
       - name: Test
