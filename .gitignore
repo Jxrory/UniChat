@@ -5,3 +5,7 @@ __pycache__/
 .env
 config.yaml
 .gstack/
+
+# widget build deps (产物 src/static/widget.js 提交进 git，源码在 widget/)
+widget/node_modules/
+widget/dist/
