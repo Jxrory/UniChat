@@ -8,7 +8,10 @@
 
 - **包管理**: `uv`（`uv add <pkg>` / `uv run <cmd>`）
 - **Web 框架**: FastAPI（单进程 uvicorn）
-- **ORM**: SQLAlchemy，DB 用 SQLite（切 Postgres 只需改 DSN）
+- **ORM + Migration**: SQLAlchemy + Alembic（DB 用 SQLite，切 Postgres 只需改 DSN）
+  - 生成迁移: `uv run alembic revision --autogenerate -m "<描述>"`
+  - 手动迁移: `uv run alembic upgrade head`
+  - startup 自动跑: `src/db.py:run_migrations()`
 - **测试**: pytest
 - **Python 版本**: 按 pyproject.toml（>=3.11）
 

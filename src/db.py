@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 logger = logging.getLogger("unichat.db")
@@ -22,48 +22,21 @@ def init_db(database_url: str, **engine_kwargs: Any) -> None:
     logger.debug("Database engine created")
 
 
-def create_all() -> None:
-    if _engine is None:
-        raise RuntimeError("init_db() must be called before create_all()")
-    Base.metadata.create_all(_engine)
-    _migrate_contacts_to_contact_inboxes()
-    logger.info("Database tables created")
+def run_migrations() -> None:
+    from alembic.command import stamp, upgrade
+    from alembic.config import Config as AlembicConfig
+    from alembic.script import ScriptDirectory
+    from sqlalchemy import inspect
 
+    cfg = AlembicConfig("alembic.ini")
 
-def _migrate_contacts_to_contact_inboxes() -> None:
-    if _engine is None:
-        return
-    session = get_session()
-    try:
-        from src.models import ContactInbox
+    inspector = inspect(_engine)
+    if "alembic_version" not in inspector.get_table_names():
+        script = ScriptDirectory.from_config(cfg)
+        stamp(cfg, script.get_base())
 
-        inspector = inspect(_engine)
-        cols = {c["name"] for c in inspector.get_columns("contacts")}
-        if "inbox_id" not in cols:
-            return
-
-        rows = session.execute(
-            text(
-                "SELECT id, inbox_id, source_id FROM contacts "
-                "WHERE id NOT IN (SELECT contact_id FROM contact_inboxes)"
-            )
-        ).fetchall()
-
-        for row in rows:
-            ci = ContactInbox(
-                contact_id=row[0],
-                inbox_id=row[1],
-                source_id=row[2],
-            )
-            session.add(ci)
-        session.commit()
-        if rows:
-            logger.info("Migrated %d contacts to contact_inboxes", len(rows))
-    except Exception:
-        session.rollback()
-        logger.warning("ContactInbox migration skipped (likely fresh DB)")
-    finally:
-        session.close()
+    upgrade(cfg, "head")
+    logger.info("Database migrations up to date")
 
 
 def get_session() -> Session:

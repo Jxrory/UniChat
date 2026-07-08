@@ -16,7 +16,7 @@ from src.adapters.web import register as register_web
 from src.adapters.whatsapp import register as register_whatsapp
 from src.bus import init_buses, get_webhook_incoming_bus, get_incoming_bus, get_out_coming_bus
 from src.config import AppConfig, load_config
-from src.db import create_all, dispose_engine, init_db
+from src.db import dispose_engine, init_db, run_migrations
 from src.log_setup import setup_logging
 from src.routes.admin import router as admin_router
 from src.routes.health import router as health_router
@@ -52,7 +52,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         logger.info("Starting UniChat — log_level=%s", config.server.log_level)
 
         init_db(config.database_url)
-        create_all()
+        run_migrations()
         init_buses()
 
         ingest_service = IngestService()
