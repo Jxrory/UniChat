@@ -193,18 +193,20 @@
         .msg-bubble-agentbot .markdown-body table tr { background: transparent; }
         .msg-bubble-contact .markdown-body table tr:nth-child(2n),
         .msg-bubble-agentbot .markdown-body table tr:nth-child(2n) { background: rgba(0,0,0,0.03); }
-        /* user bubble（蓝色背景，白色文字）：清除 GitHub 装饰，精简适配 */
-        .msg-bubble-user .markdown-body { color: #fff; background: transparent; }
+        /* user bubble（蓝色背景，白色文字） */
+        .msg-bubble-user .markdown-body { color: #fff; background: transparent; font-size: 14px; }
+        .msg-bubble-user .markdown-body p,
         .msg-bubble-user .markdown-body h1,
         .msg-bubble-user .markdown-body h2,
         .msg-bubble-user .markdown-body h3,
         .msg-bubble-user .markdown-body h4,
         .msg-bubble-user .markdown-body h5,
-        .msg-bubble-user .markdown-body h6 { border-bottom: none; padding-bottom: 0; }
+        .msg-bubble-user .markdown-body h6,
+        .msg-bubble-user .markdown-body li { color: #fff; }
+        .msg-bubble-user .markdown-body blockquote { border-left-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
         .msg-bubble-user .markdown-body code { background: rgba(255,255,255,0.13); }
         .msg-bubble-user .markdown-body pre { background: rgba(0,0,0,0.3); color: #f0f6fc; }
         .msg-bubble-user .markdown-body pre code { background: none; }
-        .msg-bubble-user .markdown-body blockquote { border-left-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
         .msg-bubble-user .markdown-body table { border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; }
         .msg-bubble-user .markdown-body th,
         .msg-bubble-user .markdown-body td { border: 1px solid rgba(255,255,255,0.15); padding: 6px 10px; }
