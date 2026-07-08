@@ -1,12 +1,16 @@
 import { marked } from "marked"
 import DOMPurify from "dompurify"
 import githubCss from "github-markdown-css/github-markdown-light.css"
+import darkCss from "github-markdown-css/github-markdown-dark.css"
 
 var STORAGE_SOURCE_ID = "unichat_widget_source_id"
 var STORAGE_CONV_ID = "unichat_widget_conversation_id"
 var STORAGE_INBOX = "unichat_widget_inbox"
 
 var instances = []
+
+// Scope dark theme to contact bubble (colored bg, white text)
+var scopedDark = darkCss.replace(/\.markdown-body/g, "#unichat-widget .uw-msg.contact .markdown-body")
 
 marked.setOptions({
   breaks: true,
@@ -302,27 +306,13 @@ var widgetMarkdownOverrides = [
   "#unichat-widget .uw-msg .markdown-body img { border-radius: 10px; margin: 4px 0; }",
   /* 链接 */
   "#unichat-widget .uw-msg .markdown-body a { color: inherit; word-break: break-all; }",
-  /* contact 气泡（彩色背景，白色文字）：清除 GitHub 样式，精简适配 */
-  "#unichat-widget .uw-msg.contact .markdown-body {",
-  "  color: #fff; background: transparent;",
+  /* contact 气泡使用 github-markdown-css dark 主题，仅覆盖气泡适配相关 */
+  "#unichat-widget .uw-msg.contact .markdown-body { background: transparent; }",
+  "#unichat-widget .uw-msg.contact .markdown-body table {",
+  "  display: table; width: 100%;",
+  "  border-collapse: separate; border-spacing: 0;",
+  "  border-radius: 8px; overflow: hidden;",
   "}",
-  "#unichat-widget .uw-msg.contact .markdown-body h1,",
-  "#unichat-widget .uw-msg.contact .markdown-body h2,",
-  "#unichat-widget .uw-msg.contact .markdown-body h3,",
-  "#unichat-widget .uw-msg.contact .markdown-body h4,",
-  "#unichat-widget .uw-msg.contact .markdown-body h5,",
-  "#unichat-widget .uw-msg.contact .markdown-body h6 {",
-  "  border-bottom: none; padding-bottom: 0;",
-  "}",
-  "#unichat-widget .uw-msg.contact .markdown-body pre { background: rgba(0,0,0,0.3); color: #f0f6fc; }",
-  "#unichat-widget .uw-msg.contact .markdown-body code { background: rgba(255,255,255,0.13); }",
-  "#unichat-widget .uw-msg.contact .markdown-body blockquote { border-left-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }",
-  "#unichat-widget .uw-msg.contact .markdown-body table { border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; }",
-  "#unichat-widget .uw-msg.contact .markdown-body th,",
-  "#unichat-widget .uw-msg.contact .markdown-body td { border: 1px solid rgba(255,255,255,0.15); padding: 6px 10px; }",
-  "#unichat-widget .uw-msg.contact .markdown-body table tr { background: rgba(0,0,0,0.2); }",
-  "#unichat-widget .uw-msg.contact .markdown-body table tr:nth-child(2n) { background: rgba(0,0,0,0.32); }",
-  "#unichat-widget .uw-msg.contact .markdown-body hr { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.15); }",
   /* activity 消息 */
   "#unichat-widget .uw-activity .markdown-body { font-style: italic; }",
   "#unichat-widget .uw-activity .markdown-body p { margin: 0; }",
@@ -344,7 +334,7 @@ function Widget(options) {
   this._historyLoaded = false
 
   localStorage.setItem(STORAGE_INBOX, this.inbox)
-  injectStyles(styles + "\n" + githubCss + "\n" + widgetMarkdownOverrides)
+  injectStyles(styles + "\n" + githubCss + "\n" + scopedDark + "\n" + widgetMarkdownOverrides)
   this._buildDOM()
   this._bindEvents()
   this._setupVisualViewport()
