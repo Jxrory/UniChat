@@ -22,6 +22,13 @@ def init_db(database_url: str, **engine_kwargs: Any) -> None:
     logger.debug("Database engine created")
 
 
+def create_all() -> None:
+    if _engine is None:
+        raise RuntimeError("init_db() must be called before create_all()")
+    Base.metadata.create_all(_engine)
+    logger.info("Database tables created")
+
+
 def run_migrations() -> None:
     from alembic.command import upgrade
     from alembic.config import Config as AlembicConfig
