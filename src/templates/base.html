@@ -193,16 +193,17 @@
         .msg-bubble-agentbot .markdown-body table tr { background: transparent; }
         .msg-bubble-contact .markdown-body table tr:nth-child(2n),
         .msg-bubble-agentbot .markdown-body table tr:nth-child(2n) { background: rgba(0,0,0,0.03); }
-        /* user bubble（蓝色背景，白色文字）：半透白底确保文字可读 */
-        .msg-bubble-user .markdown-body code { background: rgba(255,255,255,0.2); }
-        .msg-bubble-user .markdown-body pre { background: rgba(255,255,255,0.15); }
+        /* user bubble（蓝色背景，白色文字）：套用 dark 主题色系 */
+        .msg-bubble-user .markdown-body code { background: #656c7633; }
+        .msg-bubble-user .markdown-body pre { background: #151b23; }
         .msg-bubble-user .markdown-body pre code { background: none; }
-        .msg-bubble-user .markdown-body blockquote { border-left-color: rgba(255,255,255,0.5); }
-        .msg-bubble-user .markdown-body table th,
-        .msg-bubble-user .markdown-body table td { border-color: rgba(255,255,255,0.25); }
-        .msg-bubble-user .markdown-body th { border-bottom-color: rgba(255,255,255,0.35); }
-        .msg-bubble-user .markdown-body table tr { background: transparent; }
-        .msg-bubble-user .markdown-body table tr:nth-child(2n) { background: rgba(255,255,255,0.08); }
+        .msg-bubble-user .markdown-body blockquote { border-left-color: #3d444d; color: #9198a1; }
+        .msg-bubble-user .markdown-body table { border: 1px solid #3d444d; border-radius: 8px; }
+        .msg-bubble-user .markdown-body th,
+        .msg-bubble-user .markdown-body td { border: 1px solid #3d444d; padding: 6px 10px; }
+        .msg-bubble-user .markdown-body th { border-bottom-color: #3d444d; font-weight: 600; }
+        .msg-bubble-user .markdown-body table tr { background: #0d1117; }
+        .msg-bubble-user .markdown-body table tr:nth-child(2n) { background: #151b23; }
 
         .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .login-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 40px; width: 360px; }
