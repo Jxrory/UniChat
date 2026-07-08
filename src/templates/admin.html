@@ -60,7 +60,7 @@ function setupReplyInput(e) {
   if (el.dataset.replySetup) return;
   el.dataset.replySetup = '1';
   el.addEventListener('keydown', function(ev) {
-    if (ev.key === 'Enter' && !ev.shiftKey) {
+    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
       ev.preventDefault();
       el.form && el.form.requestSubmit();
     }

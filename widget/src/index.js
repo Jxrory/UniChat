@@ -419,7 +419,7 @@ Widget.prototype._bindEvents = function () {
   })
 
   this._inputEl.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       self._doSend()
     }
