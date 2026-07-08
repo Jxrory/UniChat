@@ -14,6 +14,9 @@ deploy ALL=(unichat) NOPASSWD: /usr/bin/git -C /opt/unichat reset *
 deploy ALL=(unichat) NOPASSWD: /usr/bin/uv sync --frozen
 deploy ALL=(unichat) NOPASSWD: /usr/bin/uv sync
 
+# 允许执行数据库迁移
+deploy ALL=(unichat) NOPASSWD: /usr/bin/uv run alembic upgrade head
+
 # 允许重启/查看服务
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart unichat
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl status unichat

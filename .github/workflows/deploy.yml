@@ -37,6 +37,7 @@ jobs:
             sudo -u unichat /usr/bin/git -C /opt/unichat pull
             cd /opt/unichat
             sudo -u unichat /usr/bin/uv sync --frozen
+            sudo -u unichat /usr/bin/uv run alembic upgrade head
             sudo /usr/bin/systemctl restart unichat
 
       - name: Health check
