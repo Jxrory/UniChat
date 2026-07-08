@@ -1,6 +1,6 @@
 import { marked } from "marked"
 import DOMPurify from "dompurify"
-import markdownCss from "./markdown.css"
+import githubCss from "github-markdown-css/github-markdown-light.css"
 
 var STORAGE_SOURCE_ID = "unichat_widget_source_id"
 var STORAGE_CONV_ID = "unichat_widget_conversation_id"
@@ -18,11 +18,12 @@ marked.setOptions({
 var PURIFY_CONFIG = {
   ALLOWED_TAGS: [
     "p", "em", "strong", "code", "pre", "ul", "ol", "li", "a",
-    "blockquote", "hr", "br", "h4", "h5", "h6",
+    "blockquote", "hr", "br",
+    "h1", "h2", "h3", "h4", "h5", "h6",
     "img", "table", "thead", "tbody", "tr", "th", "td",
-    "del", "span",
+    "del", "span", "div",
   ],
-  ALLOWED_ATTR: ["href", "alt", "src", "class", "loading", "referrerpolicy"],
+  ALLOWED_ATTR: ["href", "alt", "src", "class", "loading", "referrerpolicy", "title"],
   ALLOW_DATA_ATTR: false,
 }
 
@@ -102,35 +103,42 @@ function iconSend() {
 var styles = [
   "#unichat-widget * { box-sizing:border-box; margin:0; padding:0; }",
   "#unichat-widget {",
-  "  font-family: var(--widget-font-family, system-ui, -apple-system, sans-serif);",
+  "  font-family: var(--widget-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);",
   "  position: fixed;",
   "  bottom: var(--widget-position-bottom, 20px);",
   "  right: var(--widget-position-right, 20px);",
   "  z-index: 2147483645;",
+  "  --uw-primary: var(--widget-primary-color, #4F46E5);",
+  "  --uw-primary-dark: color-mix(in srgb, var(--uw-primary) 85%, #000);",
+  "  --uw-radius: 16px;",
   "}",
   "#unichat-widget .uw-btn {",
-  "  width: 60px; height: 60px; border-radius: 50%;",
-  "  background: var(--widget-primary-color, #4F46E5);",
+  "  width: 58px; height: 58px; border-radius: 50%;",
+  "  background: var(--uw-primary);",
   "  border: none; cursor: pointer;",
   "  display: flex; align-items: center; justify-content: center;",
-  "  box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
-  "  transition: transform 0.2s, box-shadow 0.2s;",
+  "  box-shadow: 0 6px 20px -4px color-mix(in srgb, var(--uw-primary) 50%, transparent),",
+  "              0 2px 8px rgba(0,0,0,0.08);",
+  "  transition: transform 0.15s ease, box-shadow 0.15s ease;",
   "}",
   "#unichat-widget .uw-btn:hover {",
-  "  transform: scale(1.05);",
-  "  box-shadow: 0 6px 20px rgba(0,0,0,0.2);",
+  "  transform: translateY(-2px);",
+  "  box-shadow: 0 10px 28px -4px color-mix(in srgb, var(--uw-primary) 55%, transparent),",
+  "              0 4px 12px rgba(0,0,0,0.1);",
   "}",
+  "#unichat-widget .uw-btn:active { transform: translateY(0) scale(0.96); }",
   "#unichat-widget .uw-panel {",
   "  position: absolute; bottom: 70px; right: 0;",
-  "  width: 320px; height: 450px;",
-  "  background: #fff; border-radius: 12px;",
-  "  box-shadow: 0 8px 32px rgba(0,0,0,0.15);",
+  "  width: 360px; height: 520px;",
+  "  background: #fff; border-radius: var(--uw-radius);",
+  "  box-shadow: 0 24px 60px -12px rgba(0,0,0,0.18),",
+  "              0 8px 24px -8px rgba(0,0,0,0.1);",
   "  display: none; flex-direction: column; overflow: hidden;",
-  "  animation: uw-slide-up 0.2s ease-out;",
+  "  animation: uw-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);",
   "}",
   "@keyframes uw-slide-up {",
-  "  from { opacity:0; transform:translateY(10px); }",
-  "  to { opacity:1; transform:translateY(0); }",
+  "  from { opacity:0; transform:translateY(12px) scale(0.98); }",
+  "  to { opacity:1; transform:translateY(0) scale(1); }",
   "}",
   "@media (max-width:480px) {",
   "  #unichat-widget .uw-panel {",
@@ -146,61 +154,167 @@ var styles = [
   "  }",
   "}",
   "#unichat-widget .uw-header {",
-  "  background: var(--widget-primary-color, #4F46E5);",
-  "  color: #fff; padding: 16px; display: flex;",
+  "  background: var(--uw-primary);",
+  "  color: #fff; padding: 18px 20px; display: flex;",
   "  align-items: center; justify-content: space-between; flex-shrink: 0;",
   "}",
-  "#unichat-widget .uw-header h3 { font-size: 16px; font-weight: 600; }",
+  "#unichat-widget .uw-header h3 { font-size: 15px; font-weight: 600; letter-spacing: 0.01em; }",
   "#unichat-widget .uw-close {",
-  "  background: none; border: none; color: #fff;",
-  "  cursor: pointer; opacity: 0.8; padding: 4px; line-height: 0;",
+  "  background: rgba(255,255,255,0.15); border: none; color: #fff;",
+  "  cursor: pointer; opacity: 0.9; padding: 6px; line-height: 0;",
+  "  border-radius: 8px; transition: background 0.15s;",
   "}",
-  "#unichat-widget .uw-close:hover { opacity: 1; }",
+  "#unichat-widget .uw-close:hover { background: rgba(255,255,255,0.25); opacity: 1; }",
   "#unichat-widget .uw-messages {",
-  "  flex: 1; overflow-y: auto; padding: 16px;",
-  "  display: flex; flex-direction: column; gap: 8px;",
+  "  flex: 1; overflow-y: auto; padding: 20px 16px;",
+  "  display: flex; flex-direction: column; gap: 10px;",
+  "  background: #FAFAFA;",
+  "  -webkit-overflow-scrolling: touch;",
   "}",
+  "#unichat-widget .uw-messages::-webkit-scrollbar { width: 5px; }",
+  "#unichat-widget .uw-messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; }",
   "#unichat-widget .uw-msg {",
-  "  max-width: 80%; padding: 10px 14px; border-radius: 16px;",
-  "  font-size: 14px; line-height: 1.4; word-wrap: break-word;",
+  "  max-width: 82%; padding: 10px 14px; border-radius: 16px;",
+  "  font-size: 14px; line-height: 1.5; word-wrap: break-word;",
   "}",
   "#unichat-widget .uw-msg.contact {",
   "  align-self: flex-end;",
-  "  background: var(--widget-primary-color, #4F46E5);",
-  "  color: #fff; border-bottom-right-radius: 4px;",
+  "  background: var(--uw-primary); color: #fff;",
+  "  border-bottom-right-radius: 5px;",
+  "  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--uw-primary) 40%, transparent);",
   "}",
   "#unichat-widget .uw-msg.agent {",
   "  align-self: flex-start;",
-  "  background: #F3F4F6; color: #111827; border-bottom-left-radius: 4px;",
+  "  background: #fff; color: #1F2937; border-bottom-left-radius: 5px;",
+  "  box-shadow: 0 1px 3px rgba(0,0,0,0.06);",
+  "  border: 1px solid #EEF0F2;",
   "}",
   "#unichat-widget .uw-input-bar {",
-  "  display: flex; padding: 12px; gap: 8px;",
-  "  border-top: 1px solid #E5E7EB; flex-shrink: 0; background: #fff;",
+  "  display: flex; align-items: flex-end; padding: 12px 14px; gap: 10px;",
+  "  border-top: 1px solid #EEF0F2; flex-shrink: 0; background: #fff;",
   "}",
   "#unichat-widget .uw-input {",
-  "  flex: 1; border: 1px solid #D1D5DB; border-radius: 20px;",
-  "  padding: 8px 14px; font-size: 14px; outline: none; font-family: inherit;",
+  "  flex: 1; border: 1px solid #E5E7EB; border-radius: 20px;",
+  "  padding: 9px 14px; font-size: 14px; line-height: 1.4; outline: none; font-family: inherit;",
+  "  resize: none; min-height: 38px; max-height: 120px; overflow-y: auto;",
+  "  transition: border-color 0.15s, box-shadow 0.15s;",
   "}",
-  "#unichat-widget .uw-input:focus { border-color: var(--widget-primary-color, #4F46E5); }",
-  "#unichat-widget .uw-input::placeholder { color: #9CA3AF; }",
+  "#unichat-widget .uw-input:focus {",
+  "  border-color: var(--uw-primary);",
+  "  box-shadow: 0 0 0 3px color-mix(in srgb, var(--uw-primary) 12%, transparent);",
+  "}",
+  "#unichat-widget .uw-input::placeholder { color: #B0B4BC; }",
   "#unichat-widget .uw-send {",
-  "  background: var(--widget-primary-color, #4F46E5);",
-  "  border: none; color: #fff; width: 36px; height: 36px;",
+  "  background: var(--uw-primary);",
+  "  border: none; color: #fff; width: 38px; height: 38px;",
   "  border-radius: 50%; cursor: pointer;",
   "  display: flex; align-items: center; justify-content: center;",
-  "  flex-shrink: 0; transition: opacity 0.2s; line-height: 0;",
+  "  flex-shrink: 0; transition: transform 0.15s, opacity 0.15s; line-height: 0;",
+  "  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--uw-primary) 40%, transparent);",
   "}",
-  "#unichat-widget .uw-send:disabled { opacity: 0.4; cursor: not-allowed; }",
+  "#unichat-widget .uw-send:hover:not(:disabled) { transform: scale(1.08); }",
+  "#unichat-widget .uw-send:active:not(:disabled) { transform: scale(0.94); }",
+  "#unichat-widget .uw-send:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }",
   "#unichat-widget .uw-activity {",
-  "  text-align: center; color: #6B7280; font-size: 12px; padding: 4px 16px;",
+  "  text-align: center; color: #9CA3AF; font-size: 12px; padding: 6px 16px;",
   "  font-style: italic; line-height: 1.5; word-wrap: break-word;",
   "}",
   "#unichat-widget .uw-empty {",
-  "  text-align: center; color: #9CA3AF; font-size: 14px; padding: 40px 16px;",
+  "  text-align: center; color: #B0B4BC; font-size: 14px; padding: 48px 20px;",
+  "  line-height: 1.6;",
   "}",
   "@media (max-width:480px) {",
   "  #unichat-widget .uw-input { font-size: 16px; }",
   "}",
+].join("\n")
+
+/* Override github-markdown-css defaults for ~360px chat bubbles.
+   github-markdown-css targets .markdown-body at 16px root on a full
+   page; we shrink it to fit a 14px bubble with tight spacing. */
+var widgetMarkdownOverrides = [
+  "#unichat-widget .uw-msg .markdown-body,",
+  "#unichat-widget .uw-activity .markdown-body {",
+  "  font-size: 14px;",
+  "  line-height: 1.5;",
+  "  color: inherit;",
+  "  background: transparent;",
+  "  font-family: inherit;",
+  "  word-wrap: break-word;",
+  "}",
+  /* 段落 */
+  "#unichat-widget .uw-msg .markdown-body p { margin: 0 0 6px; }",
+  "#unichat-widget .uw-msg .markdown-body p:last-child { margin-bottom: 0; }",
+  /* 标题缩小 */
+  "#unichat-widget .uw-msg .markdown-body h1,",
+  "#unichat-widget .uw-msg .markdown-body h2,",
+  "#unichat-widget .uw-msg .markdown-body h3,",
+  "#unichat-widget .uw-msg .markdown-body h4,",
+  "#unichat-widget .uw-msg .markdown-body h5,",
+  "#unichat-widget .uw-msg .markdown-body h6 {",
+  "  margin: 10px 0 4px; font-weight: 600; line-height: 1.3;",
+  "}",
+  "#unichat-widget .uw-msg .markdown-body h1 { font-size: 18px; }",
+  "#unichat-widget .uw-msg .markdown-body h2 { font-size: 16px; }",
+  "#unichat-widget .uw-msg .markdown-body h3 { font-size: 15px; padding-bottom: 0.3em; }",
+  "#unichat-widget .uw-msg .markdown-body h4 { font-size: 14px; }",
+  "#unichat-widget .uw-msg .markdown-body h5,",
+  "#unichat-widget .uw-msg .markdown-body h6 { font-size: 13px; }",
+  "#unichat-widget .uw-msg .markdown-body h1:first-child,",
+  "#unichat-widget .uw-msg .markdown-body h2:first-child,",
+  "#unichat-widget .uw-msg .markdown-body h3:first-child,",
+  "#unichat-widget .uw-msg .markdown-body h4:first-child,",
+  "#unichat-widget .uw-msg .markdown-body h5:first-child,",
+  "#unichat-widget .uw-msg .markdown-body h6:first-child { margin-top: 0; }",
+  /* 列表收紧 */
+  "#unichat-widget .uw-msg .markdown-body ul,",
+  "#unichat-widget .uw-msg .markdown-body ol { margin: 4px 0 6px; padding-left: 22px; }",
+  "#unichat-widget .uw-msg .markdown-body li { margin: 2px 0; }",
+  "#unichat-widget .uw-msg .markdown-body li + li { margin-top: 2px; }",
+  /* 代码块缩小 */
+  "#unichat-widget .uw-msg .markdown-body code {",
+  "  font-size: 12.5px; padding: 0.2em 0.4em; word-break: break-all;",
+  "}",
+  "#unichat-widget .uw-msg .markdown-body pre { margin: 6px 0; padding: 10px 12px; }",
+  "#unichat-widget .uw-msg .markdown-body pre code { font-size: 12px; }",
+  /* 表格：圆角 + 仅水平分隔线（GitHub 风格），适配窄气泡 */
+  "#unichat-widget .uw-msg .markdown-body table {",
+  "  display: table; width: 100%; font-size: 13px; margin: 6px 0;",
+  "  border-collapse: separate; border-spacing: 0;",
+  "  border-radius: 8px; overflow: hidden;",
+  "}",
+  "#unichat-widget .uw-msg .markdown-body th,",
+  "#unichat-widget .uw-msg .markdown-body td {",
+  "  padding: 6px 10px; border: none;",
+  "  border-top: 1px solid rgba(127, 127, 127, 0.2);",
+  "  word-break: break-word;",
+  "}",
+  "#unichat-widget .uw-msg .markdown-body th {",
+  "  border-top: none;",
+  "  border-bottom: 2px solid rgba(127, 127, 127, 0.28);",
+  "  font-weight: 600;",
+  "}",
+  "#unichat-widget .uw-msg .markdown-body tbody tr:last-child td { border-bottom: none; }",
+  /* 引用 */
+  "#unichat-widget .uw-msg .markdown-body blockquote { margin: 4px 0; padding: 2px 12px; }",
+  /* 分隔线 */
+  "#unichat-widget .uw-msg .markdown-body hr { margin: 10px 0; }",
+  /* 图片圆角 */
+  "#unichat-widget .uw-msg .markdown-body img { border-radius: 10px; margin: 4px 0; }",
+  /* 链接 */
+  "#unichat-widget .uw-msg .markdown-body a { color: inherit; word-break: break-all; }",
+  /* contact 气泡（彩色背景）：代码块/引用/表格边线用半透白 */
+  "#unichat-widget .uw-msg.contact .markdown-body pre { background: rgba(0,0,0,0.2); }",
+  "#unichat-widget .uw-msg.contact .markdown-body pre code { color: #fff; }",
+  "#unichat-widget .uw-msg.contact .markdown-body code { background: rgba(255,255,255,0.2); }",
+  "#unichat-widget .uw-msg.contact .markdown-body blockquote { border-left-color: rgba(255,255,255,0.6); }",
+  "#unichat-widget .uw-msg.contact .markdown-body table th,",
+  "#unichat-widget .uw-msg.contact .markdown-body table td { border-color: rgba(255,255,255,0.2); }",
+  "#unichat-widget .uw-msg.contact .markdown-body table th { border-bottom-color: rgba(255,255,255,0.35); }",
+  "#unichat-widget .uw-msg.contact .markdown-body table tr:nth-child(2n) { background: rgba(255,255,255,0.06); }",
+  "#unichat-widget .uw-msg.contact .markdown-body hr { background: rgba(255,255,255,0.3); }",
+  /* activity 消息 */
+  "#unichat-widget .uw-activity .markdown-body { font-style: italic; }",
+  "#unichat-widget .uw-activity .markdown-body p { margin: 0; }",
 ].join("\n")
 
 function Widget(options) {
@@ -219,7 +333,7 @@ function Widget(options) {
   this._historyLoaded = false
 
   localStorage.setItem(STORAGE_INBOX, this.inbox)
-  injectStyles(styles + "\n" + markdownCss)
+  injectStyles(styles + "\n" + githubCss + "\n" + widgetMarkdownOverrides)
   this._buildDOM()
   this._bindEvents()
   this._setupVisualViewport()
@@ -266,11 +380,10 @@ Widget.prototype._buildDOM = function () {
   var bar = document.createElement("div")
   bar.className = "uw-input-bar"
 
-  this._inputEl = document.createElement("input")
+  this._inputEl = document.createElement("textarea")
   this._inputEl.className = "uw-input"
-  this._inputEl.type = "text"
+  this._inputEl.rows = 1
   this._inputEl.placeholder = "Type a message..."
-  this._inputEl.autocomplete = "off"
 
   this._sendBtn = document.createElement("button")
   this._sendBtn.className = "uw-send"
@@ -302,6 +415,7 @@ Widget.prototype._bindEvents = function () {
 
   this._inputEl.addEventListener("input", function () {
     self._sendBtn.disabled = !self._inputEl.value.trim()
+    self._autoResize()
   })
 
   this._inputEl.addEventListener("keydown", function (e) {
@@ -330,11 +444,17 @@ Widget.prototype._setupVisualViewport = function () {
   this._onVVResize()
 }
 
+Widget.prototype._autoResize = function () {
+  this._inputEl.style.height = "auto"
+  this._inputEl.style.height = this._inputEl.scrollHeight + "px"
+}
+
 Widget.prototype._doSend = function () {
   if (this._sending) return
   var text = this._inputEl.value.trim()
   if (!text) return
   this._inputEl.value = ""
+  this._inputEl.style.height = "auto"
   this._sendBtn.disabled = true
   this.send(text)
 }
@@ -404,7 +524,10 @@ Widget.prototype._addActivity = function (text) {
   }
   var el = document.createElement("div")
   el.className = "uw-activity"
-  el.innerHTML = renderContent(text)
+  var body = document.createElement("div")
+  body.className = "markdown-body"
+  body.innerHTML = renderContent(text)
+  el.appendChild(body)
   this._messagesEl.appendChild(el)
   this._messagesEl.scrollTop = this._messagesEl.scrollHeight
   return el
@@ -417,7 +540,10 @@ Widget.prototype._addMessage = function (text, senderType) {
   }
   var el = document.createElement("div")
   el.className = "uw-msg " + senderType
-  el.innerHTML = renderContent(text)
+  var body = document.createElement("div")
+  body.className = "markdown-body"
+  body.innerHTML = renderContent(text)
+  el.appendChild(body)
   this._messagesEl.appendChild(el)
   this._messagesEl.scrollTop = this._messagesEl.scrollHeight
   return el
