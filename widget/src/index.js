@@ -310,7 +310,8 @@ var widgetMarkdownOverrides = [
   "#unichat-widget .uw-msg.contact .markdown-body table th,",
   "#unichat-widget .uw-msg.contact .markdown-body table td { border-color: rgba(255,255,255,0.2); }",
   "#unichat-widget .uw-msg.contact .markdown-body table th { border-bottom-color: rgba(255,255,255,0.35); }",
-  "#unichat-widget .uw-msg.contact .markdown-body table tr:nth-child(2n) { background: rgba(255,255,255,0.06); }",
+  "#unichat-widget .uw-msg.contact .markdown-body table tr { background: transparent; }",
+  "#unichat-widget .uw-msg.contact .markdown-body table tr:nth-child(2n) { background: rgba(255,255,255,0.08); }",
   "#unichat-widget .uw-msg.contact .markdown-body hr { background: rgba(255,255,255,0.3); }",
   /* activity 消息 */
   "#unichat-widget .uw-activity .markdown-body { font-style: italic; }",

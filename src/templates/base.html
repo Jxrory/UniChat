@@ -188,7 +188,12 @@
         .msg-container .markdown-body hr { margin: 10px 0; }
         .msg-container .markdown-body img { border-radius: 8px; margin: 4px 0; max-width: 100%; }
         .msg-container .markdown-body a { word-break: break-all; }
-        /* user bubble (agent reply): white text on primary */
+        /* contact & agentbot（浅色背景）：透明行底透出气泡底色 */
+        .msg-bubble-contact .markdown-body table tr,
+        .msg-bubble-agentbot .markdown-body table tr { background: transparent; }
+        .msg-bubble-contact .markdown-body table tr:nth-child(2n),
+        .msg-bubble-agentbot .markdown-body table tr:nth-child(2n) { background: rgba(0,0,0,0.03); }
+        /* user bubble（蓝色背景，白色文字）：半透白底确保文字可读 */
         .msg-bubble-user .markdown-body code { background: rgba(255,255,255,0.2); }
         .msg-bubble-user .markdown-body pre { background: rgba(255,255,255,0.15); }
         .msg-bubble-user .markdown-body pre code { background: none; }
@@ -196,6 +201,8 @@
         .msg-bubble-user .markdown-body table th,
         .msg-bubble-user .markdown-body table td { border-color: rgba(255,255,255,0.25); }
         .msg-bubble-user .markdown-body th { border-bottom-color: rgba(255,255,255,0.35); }
+        .msg-bubble-user .markdown-body table tr { background: transparent; }
+        .msg-bubble-user .markdown-body table tr:nth-child(2n) { background: rgba(255,255,255,0.08); }
 
         .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .login-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 40px; width: 360px; }
