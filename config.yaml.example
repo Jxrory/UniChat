@@ -21,6 +21,17 @@ inboxes:
   #     agentbot_url: "<AGENTBOT_URL>"
   #     agentbot_token: "<AGENTBOT_TOKEN>"
 
+  - id: web
+    name: "Web 渠道"
+    channel_type: web
+    config:
+      embed_key: "<WEB_EMBED_KEY>"
+      hmac_secret: "<WEB_HMAC_SECRET>"
+      idle_resolve_hours: 1
+      handoff_activity_text: "You are being transferred to a live agent. Please hold."
+      agentbot_url: "<AGENTBOT_URL>"
+      agentbot_token: "<AGENTBOT_TOKEN>"
+
   - id: test
     name: "测试渠道"
     channel_type: test
