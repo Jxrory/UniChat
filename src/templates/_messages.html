@@ -20,18 +20,18 @@
         <div class="msg-bubble-activity" data-testid="msg-bubble" data-sender="activity">— {{ msg.content }} —</div>
         {% elif msg.sender_type == 'contact' %}
         <div class="msg-bubble msg-bubble-contact" data-testid="msg-bubble" data-sender="contact">
-            {{ msg.content }}
+            <div class="markdown-body">{{ msg.content }}</div>
             <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
         </div>
         {% elif msg.sender_type == 'agentbot' %}
         <div class="msg-bubble msg-bubble-agentbot" data-testid="msg-bubble" data-sender="agentbot">
             <span class="msg-bubble-label">🤖 Bot</span>
-            {% if msg.handoff %}[转人工] {% endif %}{{ msg.content }}
+            {% if msg.handoff %}[转人工] {% endif %}<div class="markdown-body">{{ msg.content }}</div>
             <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
         </div>
         {% elif msg.sender_type == 'user' %}
         <div class="msg-bubble msg-bubble-user" data-testid="msg-bubble" data-sender="user">
-            {{ msg.content }}
+            <div class="markdown-body">{{ msg.content }}</div>
             <div class="msg-bubble-time">{{ msg.created_at.strftime('%H:%M') }}</div>
         </div>
         {% endif %}

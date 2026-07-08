@@ -6,8 +6,9 @@
     <title>{% block title %}UniChat Admin{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400&display=swap">
     <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown-light.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <style>
         :root {
@@ -125,6 +126,72 @@
         .reply-form .input { flex: 1; }
         .reply-error { color: var(--color-error); font-size: 13px; margin-bottom: 8px; display: none; }
         .reply-error.show { display: block; }
+
+        /* github-markdown-css overrides for ~360px admin bubbles */
+        .msg-container .markdown-body {
+            font-size: 14px; line-height: 1.5; color: inherit;
+            background: transparent; font-family: inherit;
+        }
+        .msg-container .markdown-body p { margin: 0 0 6px; }
+        .msg-container .markdown-body p:last-child { margin-bottom: 0; }
+        .msg-container .markdown-body h1,
+        .msg-container .markdown-body h2,
+        .msg-container .markdown-body h3,
+        .msg-container .markdown-body h4,
+        .msg-container .markdown-body h5,
+        .msg-container .markdown-body h6 {
+            margin: 10px 0 4px; font-weight: 600; line-height: 1.3;
+        }
+        .msg-container .markdown-body h1 { font-size: 18px; }
+        .msg-container .markdown-body h2 { font-size: 16px; }
+        .msg-container .markdown-body h3 { font-size: 15px; }
+        .msg-container .markdown-body h4,
+        .msg-container .markdown-body h5,
+        .msg-container .markdown-body h6 { font-size: 14px; }
+        .msg-container .markdown-body h1:first-child,
+        .msg-container .markdown-body h2:first-child,
+        .msg-container .markdown-body h3:first-child,
+        .msg-container .markdown-body h4:first-child,
+        .msg-container .markdown-body h5:first-child,
+        .msg-container .markdown-body h6:first-child { margin-top: 0; }
+        .msg-container .markdown-body ul,
+        .msg-container .markdown-body ol { margin: 4px 0 6px; padding-left: 22px; }
+        .msg-container .markdown-body li { margin: 2px 0; }
+        .msg-container .markdown-body code {
+            font-size: 12.5px; padding: 0.2em 0.4em; word-break: break-all;
+            background: rgba(0,0,0,0.07); border-radius: 5px;
+        }
+        .msg-container .markdown-body pre { margin: 6px 0; padding: 10px 12px; border-radius: 8px; }
+        .msg-container .markdown-body pre code { font-size: 12px; background: none; }
+        .msg-container .markdown-body table {
+            display: table; width: 100%; font-size: 13px; margin: 6px 0;
+            border-collapse: separate; border-spacing: 0;
+            border-radius: 8px; overflow: hidden;
+        }
+        .msg-container .markdown-body th,
+        .msg-container .markdown-body td {
+            padding: 6px 10px; border: none;
+            border-top: 1px solid rgba(127,127,127,0.2);
+            word-break: break-word;
+        }
+        .msg-container .markdown-body th {
+            border-top: none;
+            border-bottom: 2px solid rgba(127,127,127,0.28);
+            font-weight: 600;
+        }
+        .msg-container .markdown-body tbody tr:last-child td { border-bottom: none; }
+        .msg-container .markdown-body blockquote { margin: 4px 0; padding: 2px 12px; }
+        .msg-container .markdown-body hr { margin: 10px 0; }
+        .msg-container .markdown-body img { border-radius: 8px; margin: 4px 0; max-width: 100%; }
+        .msg-container .markdown-body a { word-break: break-all; }
+        /* user bubble (agent reply): white text on primary */
+        .msg-bubble-user .markdown-body code { background: rgba(255,255,255,0.2); }
+        .msg-bubble-user .markdown-body pre { background: rgba(255,255,255,0.15); }
+        .msg-bubble-user .markdown-body pre code { background: none; }
+        .msg-bubble-user .markdown-body blockquote { border-left-color: rgba(255,255,255,0.5); }
+        .msg-bubble-user .markdown-body table th,
+        .msg-bubble-user .markdown-body table td { border-color: rgba(255,255,255,0.25); }
+        .msg-bubble-user .markdown-body th { border-bottom-color: rgba(255,255,255,0.35); }
 
         .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .login-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 40px; width: 360px; }

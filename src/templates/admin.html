@@ -34,6 +34,25 @@
 </div>
 {% endblock %}
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<script>
+function renderMarkdownBubbles() {
+  if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') return;
+  document.querySelectorAll('#message-panel .markdown-body').forEach(function(el) {
+    if (el.dataset.mdRendered) return;
+    var html = marked.parse(el.textContent, { async: false, breaks: true, gfm: true, headerIds: false, mangle: false });
+    el.innerHTML = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ["p","em","strong","code","pre","ul","ol","li","a","blockquote","hr","br","h1","h2","h3","h4","h5","h6","img","table","thead","tbody","tr","th","td","del","span","div"],
+      ALLOWED_ATTR: ["href","alt","src","class","loading","referrerpolicy","title"],
+      ALLOW_DATA_ATTR: false,
+    });
+    el.dataset.mdRendered = '1';
+  });
+}
+renderMarkdownBubbles();
+document.addEventListener('htmx:afterSettle', renderMarkdownBubbles);
+</script>
 <script>
 (function() {
     var KEY = '_ms_scroll';
